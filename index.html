@@ -383,7 +383,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.1';
+const APP_VER='v7.2';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -1624,6 +1624,7 @@ function chkRouteComplete(d){
 function saveV(){
   const d=getVD();
   if(!d.cid){toast('Select a client');return;}
+  stampDeparture(d,DB.clients.find(x=>x.id===d.cid));
   if(d.bic&&d.cacl){toast('⚠️ Cannot add bicarb and calcium same visit — remove one');return;}
   if(d.nvn){addFollowup(d.cid,d.nvn,null);}
   DB.visits.push(d);
@@ -2170,6 +2171,7 @@ function saveEditVisit(){
   // Recalc LSI
   const t=parseFloat(v.temp),p=parseFloat(v.ph),a=parseFloat(v.alk),c=parseFloat(v.ch),cy=parseFloat(v.cya),td=parseFloat(v.tds);
   if(!isNaN(t)&&!isNaN(p)&&!isNaN(a)&&!isNaN(c)){v.lsi=doLSI(t,p,a,c,isNaN(cy)?0:cy,td);}
+  stampDeparture(v,DB.clients.find(x=>x.id===v.cid));
   v.mt=Date.now();save();kickSync();closeM('mo-ev');toast('Visit updated');
 }
 
@@ -2187,65 +2189,10 @@ function rptFromDetail(){
   genRpt(DB.visits[detailVisitIdx]);
 }
 
-/* ═══════════ PDF REPORT GENERATION ═══════════ */
-async function generatePDF(v,c){
-  const{jsPDF}=window.jspdf;
-  const doc=new jsPDF({unit:'mm',format:'letter'});
-  const pw=doc.internal.pageSize.getWidth();
-  const ph=doc.internal.pageSize.getHeight();
-  const margin=15;
-  const cw=pw-margin*2;
-  let y=margin;
+/* ═══════════ v7.2 REPORT + EMAIL SHARED HELPERS ═══════════ */
 
-  // Colors
-  const navy=[11,29,58];
-  const gold=[235,119,79];
-  const teal=[6,186,181];
-  const gray=[153,153,153];
-  const grayLt=[232,232,232];
-
-  // Helper: check if we need a new page
-  function checkPage(needed){if(y+needed>ph-20){doc.addPage();y=margin;return true;}return false;}
-
-  // Helper: draw a line
-  function hLine(yPos,color){doc.setDrawColor(...(color||grayLt));doc.setLineWidth(0.5);doc.line(margin,yPos,pw-margin,yPos);}
-
-  // ── HEADER ──
-  doc.setFillColor(...navy);
-  doc.rect(0,0,pw,32,  'F');
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(18);
-  doc.setTextColor(gold[0],gold[1],gold[2]);
-  doc.text('Ripple Pool Solutions LLC',pw/2,14,{align:'center'});
-  doc.setFont('helvetica','italic');
-  doc.setFontSize(10);
-  doc.setTextColor(gold[0],gold[1],gold[2]);
-  doc.text('Luxury in Every Ripple',pw/2,22,{align:'center'});
-
-  // Gold line under header
-  doc.setDrawColor(...gold);
-  doc.setLineWidth(1);
-  doc.line(margin,33,pw-margin,33);
-
-  y=40;
-
-  // ── SERVICE REPORT TITLE ──
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(14);
-  doc.setTextColor(...navy);
-  doc.text('Service Report — '+v.dt,margin,y);
-  y+=8;
-
-  // ── CLIENT INFO ──
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(11);
-  doc.setTextColor(51,51,51);
-  doc.text(c.fn+' '+c.ln,margin,y);y+=5;
-  doc.setFontSize(10);
-  doc.setTextColor(...gray);
-  doc.text(c.ad+', '+c.ci,margin,y);y+=10;
-
-  // ── WATER CHEMISTRY TABLE ──
+// After-treatment projection (same math as the chemistry table; single source for PDF + email)
+function projAfter(v,c){
   const gal=parseFloat(c.gal)||0;const k=gal/1000;
   let dFC=parseFloat(v.fc)||0,dPH=parseFloat(v.ph)||0,dALK=parseFloat(v.alk)||0,dCH=parseFloat(v.ch)||0,dCYA=parseFloat(v.cya)||0,dSalt=parseFloat(v.salt)||0;
   if(gal>0){
@@ -2257,168 +2204,440 @@ async function generatePDF(v,c){
     if(v.salta){dSalt+=parseFloat(v.salta)*12*(10000/gal);}
   }
   if(dPH<6.5)dPH=6.5;if(dPH>8.5)dPH=8.5;
-  const hasD=gal>0&&(v.cla||v.acid||v.bic||v.cyaa||v.salta||v.cacl);
+  const hasD=gal>0&&!!(v.cla||v.acid||v.bic||v.cyaa||v.salta||v.cacl);
+  return {gal:gal,dFC:dFC,dPH:dPH,dALK:dALK,dCH:dCH,dCYA:dCYA,dSalt:dSalt,hasD:hasD};
+}
 
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(12);
-  doc.setTextColor(...navy);
-  doc.text('Water Chemistry',margin,y);y+=7;
+// Water status for a visit: post-treatment LSI when dosed, arrival LSI otherwise
+function visitStatus(v,c){
+  const pr=projAfter(v,c);
+  let depLSI=null;const t=parseFloat(v.temp),td=parseFloat(v.tds);
+  if(pr.gal>0&&!isNaN(t)&&!isNaN(pr.dPH)&&!isNaN(pr.dALK)&&!isNaN(pr.dCH)){
+    depLSI=doLSI(t,pr.dPH,pr.dALK,pr.dCH,isNaN(pr.dCYA)?0:pr.dCYA,td);
+  }
+  const sl=pr.hasD&&depLSI!==null?depLSI:(v.lsi!==undefined&&v.lsi!==null?v.lsi:null);
+  let txt='Tested',col=[153,153,153];
+  if(sl!==null&&sl!==undefined&&!isNaN(sl)){
+    if(sl>=-0.3&&sl<=0.3){txt='Balanced';col=[39,174,96];}
+    else if(sl>=-0.6&&sl<=0.6){txt='Good';col=[39,174,96];}
+    else{txt='Treated';col=[235,119,79];}
+  }
+  return {txt:txt,col:col,lsi:sl,proj:pr};
+}
 
-  // Table header
-  const col1=margin,col2=margin+65,col3=margin+110;
-  doc.setFillColor(245,245,245);
-  doc.rect(margin,y-4,cw,7,'F');
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...navy);
-  doc.text('Parameter',col1+2,y);
-  doc.text('Tested',col2+2,y);
-  if(hasD)doc.text('After Treatment',col3+2,y);
-  y+=4;hLine(y);y+=5;
+// Most recent prior visit for the same client (by date, then modified time). Null when none exists on this device.
+function prevVisitOf(v){
+  const cand=DB.visits.filter(x=>x.cid===v.cid&&x.vid!==v.vid&&x.dt<v.dt);
+  if(!cand.length)return null;
+  cand.sort((a,b)=>a.dt>b.dt?-1:(a.dt<b.dt?1:((b.mt||0)-(a.mt||0))));
+  return cand[0];
+}
 
-  // Table rows
-  const ranges={fc:[1,30],ph:[7.0,7.8],alk:[70,120],ch:[200,400],cya:[30,80]};
-  function chk(param,val){const r=ranges[param];if(!r||isNaN(val))return'';return val>=r[0]&&val<=r[1]?' (OK)':'';}
-
-  const rows=[];
-  if(v.fc)rows.push(['Free Chlorine',v.fc+' ppm',hasD?dFC.toFixed(1)+' ppm'+chk('fc',dFC):'']);
-  if(v.ph)rows.push(['pH',v.ph+'',hasD?dPH.toFixed(1)+chk('ph',dPH):'']);
-  if(v.alk)rows.push(['Alkalinity',v.alk+' ppm',hasD?Math.round(dALK)+' ppm'+chk('alk',dALK):'']);
-  if(v.ch)rows.push(['Calcium Hardness',v.ch+' ppm',hasD?Math.round(dCH)+' ppm'+chk('ch',dCH):'']);
-  if(v.cya)rows.push(['Stabilizer (CYA)',v.cya+' ppm',hasD?Math.round(dCYA)+' ppm'+chk('cya',dCYA):'']);
-  if(v.salt)rows.push(['Salt',v.salt+' ppm',hasD&&v.salta?Math.round(dSalt)+' ppm':v.salt+' ppm']);
-  if(v.phos)rows.push(['Phosphates',v.phos+' ppb','']);
-
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(10);
-  rows.forEach(r=>{
-    checkPage(7);
-    doc.setTextColor(51,51,51);
-    doc.text(r[0],col1+2,y);
-    doc.text(r[1],col2+2,y);
-    if(hasD&&r[2]){doc.setTextColor(...teal);doc.text(r[2],col3+2,y);doc.setTextColor(51,51,51);}
-    y+=3;hLine(y);y+=5;
+// Tested-vs-tested trends against the prior visit. Dead zones keep test-kit noise from producing arrows.
+// Returns null when no prior visit exists (graceful degradation: no arrows, never wrong arrows).
+function calcTrends(v){
+  const p=prevVisitOf(v);if(!p)return null;
+  const dz={fc:0.5,ph:0.1,alk:5,ch:10,cya:5,salt:100};
+  const out={};let any=false;
+  Object.keys(dz).forEach(f=>{
+    const a=parseFloat(v[f]),b=parseFloat(p[f]);
+    if(isNaN(a)||isNaN(b))return;
+    out[f]=Math.abs(a-b)<=dz[f]?0:(a>b?1:-1);any=true;
   });
+  return any?out:null;
+}
 
-  // ── POOL STATUS BADGE ──
-  let depLSI=null;
-  const temp_a=parseFloat(v.temp),tds_a=parseFloat(v.tds);
-  if(gal>0&&!isNaN(temp_a)&&!isNaN(dPH)&&!isNaN(dALK)&&!isNaN(dCH)){
-    depLSI=doLSI(temp_a,dPH,dALK,dCH,isNaN(dCYA)?0:dCYA,tds_a);
+// Store computed departure chemistry + water status on the visit record at save time.
+// Per-field gating: a departure value is stored only when the matching tested reading exists.
+function stampDeparture(v,c){
+  try{
+    if(!c)return;
+    const st=visitStatus(v,c);const pr=st.proj;
+    v.wst=st.txt;
+    v.dlsi=(st.lsi!==null&&st.lsi!==undefined&&!isNaN(st.lsi))?+st.lsi.toFixed(2):null;
+    v.dfc=v.fc?+pr.dFC.toFixed(1):null;
+    v.dph=v.ph?+pr.dPH.toFixed(2):null;
+    v.dalk=v.alk?Math.round(pr.dALK):null;
+    v.dch=v.ch?Math.round(pr.dCH):null;
+    v.dcya=v.cya?Math.round(pr.dCYA):null;
+    v.dslt=v.salt?Math.round(pr.dSalt):null;
+    v.wxr=(typeof weatherRate==='function')?+weatherRate().toFixed(2):null;
+  }catch(e){}
+}
+
+// Display bands for range bars and in-range checks.
+// FC band is pool-specific doctrine: floor = salt 3 flat / manual max(4, 7.5% of CYA); cap = min(20, max(15, 40% of CYA)).
+// CYA band is doctrine 40-60. pH / TA / CH match the existing report ranges.
+function chemBands(v,c){
+  const cya=parseFloat(v.cya);
+  const isSalt=(c.slp==='Salt Pool');
+  const capBase=isNaN(cya)?15:Math.min(20,Math.max(15,Math.round(cya*0.4)));
+  const floor=isSalt?3:(isNaN(cya)?4:Math.max(4,Math.round(cya*0.075*10)/10));
+  const bands={
+    fc:{min:0,max:Math.max(24,capBase+4),lo:floor,hi:capBase,label:'Free Chlorine',unit:'ppm'},
+    ph:{min:6.8,max:8.4,lo:7.0,hi:7.8,label:'pH',unit:''},
+    alk:{min:0,max:180,lo:70,hi:120,label:'Alkalinity',unit:'ppm'},
+    ch:{min:0,max:500,lo:200,hi:400,label:'Calcium Hardness',unit:'ppm'},
+    cya:{min:0,max:100,lo:40,hi:60,label:'Stabilizer (CYA)',unit:'ppm'}
+  };
+  const tg=parseFloat(c.sltgt)||3200;
+  bands.salt={min:Math.max(0,tg-1600),max:tg+1600,lo:tg-400,hi:tg+400,label:'Salt',unit:'ppm'};
+  return bands;
+}
+
+// Plain-English "What We Did and Why". Client-language rules apply; weather context lives in weatherLine(), not here.
+function buildNarrative(v,c){
+  const parts=[];
+  if(v.cla)parts.push('We topped up your chlorine so it can carry your pool all the way to our next visit.');
+  if(v.acid)parts.push('We adjusted the pH to keep the water gentle on skin, eyes, and your pool surfaces.');
+  if(v.bic)parts.push('We raised the alkalinity, which steadies the pH so it does not drift between visits.');
+  if(v.cyaa)parts.push('We added stabilizer, which works like sunscreen for chlorine and slows the Florida sun from burning it off.');
+  if(v.salta)parts.push('We added salt to keep your chlorine generator working in its ideal range.');
+  if(v.cacl)parts.push('We raised the calcium hardness, which protects your pool surfaces and keeps the water balanced.');
+  if(v.pr)parts.push('We treated for phosphates, removing a food source that algae relies on.');
+  if(parts.length===0)return 'Your water tested in good shape today, so no chemical adjustments were needed. We completed your regular service and your pool is ready to enjoy.';
+  return parts.join(' ');
+}
+
+// Heat-week context line. Returns null on mild weeks so it only appears when it matters.
+function weatherLine(){
+  try{
+    const r=(typeof weatherRate==='function')?weatherRate():1.0;
+    if(r>=1.5&&typeof SUMMER!=='undefined'&&SUMMER&&SUMMER.avgHigh){
+      return 'Heat week: forecast highs are averaging '+SUMMER.avgHigh+'\u00B0F, so this visit was dosed for the extra chlorine demand that Florida heat creates.';
+    }
+  }catch(e){}
+  return null;
+}
+
+// Dark test strip talking point, shown only when a chlorine dose leaves departure FC at 10 ppm or higher.
+function darkStripNote(v,c){
+  if(!v.cla)return null;
+  const pr=projAfter(v,c);
+  if(pr.hasD&&pr.dFC>=10){
+    return 'If you test the water yourself this afternoon, chlorine will read high. That is intentional: we dose to carry your pool safely through the full Florida week.';
   }
-  const statusLSI=hasD?depLSI:v.lsi;
-  let statusTxt='Tested',statusColor=gray;
-  if(statusLSI!==null){
-    if(statusLSI>=-0.3&&statusLSI<=0.3){statusTxt='Balanced';statusColor=[39,174,96];}
-    else if(statusLSI>=-0.6&&statusLSI<=0.6){statusTxt='Good';statusColor=[39,174,96];}
-    else{statusTxt='Treated';statusColor=gold;}
+  return null;
+}
+
+// Consecutive Balanced visits ending at this one (this visit judged post-treatment, prior visits by their stored status).
+function balancedStreak(v,c){
+  const vs=DB.visits.filter(x=>x.cid===v.cid&&x.dt<=v.dt&&(x.dt<v.dt||x.vid===v.vid));
+  vs.sort((a,b)=>a.dt>b.dt?-1:(a.dt<b.dt?1:0));
+  let n=0;
+  for(const x of vs){
+    const st=visitStatus(x,c);
+    if(st.lsi===null||st.lsi===undefined||isNaN(st.lsi))break;
+    if(st.lsi>=-0.3&&st.lsi<=0.3)n++;else break;
+  }
+  return n;
+}
+
+// Seasonal tips: two per month, rotating by week of month. Florida-specific; never instructs clients to add chemicals.
+const SEASONAL_TIPS={
+  1:['Cooler water slows chlorine use, so winter readings can look a little different from summer ones. That is the chemistry working as designed.',
+     'Even in winter, running the pump on its regular schedule keeps water circulating and prevents debris from settling and staining.'],
+  2:['Pollen season is beginning. A fine yellow film on the water surface is usually pollen, not algae, and normal filtration clears it.',
+     'Screen enclosures cut down debris but not pollen. If the water looks a little dusty this time of year, the filter is already on the job.'],
+  3:['As the days warm up, chlorine demand starts climbing. We adjust your dosing week by week to stay ahead of it.',
+     'Spring is a good time to check that lawn sprinklers are not spraying into the pool. Irrigation water can slowly shift pool chemistry.'],
+  4:['Oak and pine drop heavily in spring. Emptying skimmer baskets between visits helps keep circulation strong.',
+     'Once water warms past 80 degrees, everything in pool chemistry speeds up. Our dosing shifts with the temperature as it climbs.'],
+  5:['Sunscreen and body oils collect at the waterline. A gentle wipe with a soft sponge keeps the tile line bright between visits.',
+     'Longer days mean more sun burning off chlorine. Stabilizer is what shields it, and we track yours at every visit.'],
+  6:['Rainy season is here. Heavy rain dilutes pool chemistry, so expect us to rebalance after big storms.',
+     'Afternoon storms can drop leaves and debris fast. If the pool looks rough after a storm, circulation and our next visit will bring it right back.'],
+  7:['Peak summer heat is peak chlorine demand. We dose each visit to carry your pool through the full Florida week.',
+     'Water above 90 degrees is comfortable for swimmers and for algae. Consistent weekly chemistry is what keeps algae from ever getting started.'],
+  8:['August water is the warmest of the year. Keeping the pump on its full run schedule matters most right now.',
+     'Big swim weekends add sunscreen, sweat, and oils to the water. The chlorine we bank at each visit is there to absorb exactly that.'],
+  9:['Hurricane season peaks now. If a storm approaches, do not drain your pool; a full pool stands up to ground pressure and debris far better.',
+     'After any major storm we assess and rebalance. Hold off on swimming in storm-affected water until it has been treated and cleared.'],
+  10:['As temperatures ease, chlorine lasts longer. Our dosing tapers with the weather so your water stays balanced, never overdone.',
+     'Falling leaves can stain if they sit on the bottom. Netting out what you see between visits protects your finish.'],
+  11:['Cooler, shorter days cut chlorine demand dramatically compared to July. Winter chemistry is a lighter touch by design.',
+     'Pools stay healthier with the pump on a consistent schedule year-round, even when nobody is swimming.'],
+  12:['Holiday guests mean extra swimmers. A quick rinse before hopping in genuinely helps your water quality.',
+     'Even on cool weeks we test everything. Balanced water in winter protects your surfaces and equipment all year long.']
+};
+function seasonalTip(dtStr){
+  try{
+    const d=dtStr?new Date(dtStr+'T12:00:00'):new Date();
+    if(isNaN(d.getTime()))return null;
+    const arr=SEASONAL_TIPS[d.getMonth()+1]||[];
+    if(!arr.length)return null;
+    return arr[Math.floor((d.getDate()-1)/7)%arr.length];
+  }catch(e){return null;}
+}
+
+
+/* ═══════════ PDF REPORT GENERATION (v7.2 visual redesign) ═══════════ */
+async function generatePDF(v,c){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'letter'});
+  const pw=doc.internal.pageSize.getWidth();
+  const ph=doc.internal.pageSize.getHeight();
+  const margin=15;
+  const cw=pw-margin*2;
+  let y=margin;
+
+  // Brand colors
+  const navy=[11,29,58];
+  const gold=[235,119,79];
+  const teal=[6,186,181];
+  const tealDk=[2,155,150];
+  const tealLt=[190,238,236];
+  const gray=[153,153,153];
+  const grayDk=[51,51,51];
+  const grayLt=[232,232,232];
+
+  function checkPage(needed){if(y+needed>ph-20){doc.addPage();y=margin+2;return true;}return false;}
+  function hLine(yPos,color){doc.setDrawColor(...(color||grayLt));doc.setLineWidth(0.5);doc.line(margin,yPos,pw-margin,yPos);}
+
+  // Small neutral trend arrow next to a reading. dir: 1 up, -1 down, 0 steady.
+  function drawArrow(x,yBase,dir){
+    const cy=yBase-1.2;
+    doc.setFillColor(130,130,130);doc.setDrawColor(130,130,130);
+    if(dir===1)doc.triangle(x,cy+1.1,x+2.6,cy+1.1,x+1.3,cy-1.2,'F');
+    else if(dir===-1)doc.triangle(x,cy-1.2,x+2.6,cy-1.2,x+1.3,cy+1.1,'F');
+    else{doc.setLineWidth(0.5);doc.line(x,cy,x+2.6,cy);}
   }
 
-  y+=8;checkPage(20);
-  doc.setFontSize(9);doc.setTextColor(...gray);
-  doc.text('Pool Status',pw/2,y,{align:'center'});y+=8;
-  // Draw badge
-  const badgeW=32,badgeH=9;
-  doc.setFillColor(...statusColor);
-  doc.roundedRect(pw/2-badgeW/2,y-6,badgeW,badgeH,3,3,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
-  doc.text(statusTxt,pw/2,y,{align:'center'});
-  y+=12;
+  // ── HEADER: teal band, navy text, coral rule (brand palette) ──
+  doc.setFillColor(...teal);
+  doc.rect(0,0,pw,30,'F');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);
+  doc.setTextColor(...navy);
+  doc.text('Ripple Pool Solutions LLC',pw/2,13,{align:'center'});
+  doc.setFont('helvetica','italic');
+  doc.setFontSize(10);
+  doc.text('Luxury in Every Ripple',pw/2,21,{align:'center'});
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(1.2);
+  doc.line(0,30.6,pw,30.6);
 
-  // ── TREATMENT APPLIED ──
+  // ── TITLE + CLIENT (left)  /  STATUS BLOCK (right) ──
+  y=41;
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(...navy);
+  doc.text('Service Report \u2014 '+v.dt,margin,y);
+  doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(...grayDk);
+  doc.text(c.fn+' '+c.ln,margin,y+7);
+  doc.setFontSize(10);doc.setTextColor(...gray);
+  doc.text(c.ad+', '+c.ci,margin,y+12);
+
+  const st=visitStatus(v,c);
+  const sbX=pw-margin-66,sbY=36,sbW=66,sbH=28;
+  doc.setFillColor(247,249,250);
+  doc.roundedRect(sbX,sbY,sbW,sbH,2,2,'F');
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...gray);
+  doc.text('POOL STATUS',sbX+sbW/2,sbY+5,{align:'center'});
+  const bW=32,bH=8;
+  doc.setFillColor(...st.col);
+  doc.roundedRect(sbX+sbW/2-bW/2,sbY+7,bW,bH,3,3,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(255,255,255);
+  doc.text(st.txt,sbX+sbW/2,sbY+12.6,{align:'center'});
+  // Water Balance meter (LSI rendered without the jargon)
+  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...gray);
+  doc.text('Water Balance',sbX+sbW/2,sbY+19.6,{align:'center'});
+  const mX=sbX+8,mW=sbW-16,mY=sbY+21.6;
+  doc.setFillColor(...grayLt);doc.roundedRect(mX,mY,mW,2.4,1.2,1.2,'F');
+  doc.setFillColor(...teal);doc.roundedRect(mX+0.35*mW,mY,0.30*mW,2.4,1.2,1.2,'F');
+  if(st.lsi!==null&&st.lsi!==undefined&&!isNaN(st.lsi)){
+    const lv=Math.max(-1,Math.min(1,st.lsi));
+    doc.setFillColor(...navy);
+    doc.circle(mX+((lv+1)/2)*mW,mY+1.2,1.5,'F');
+  }
+  y=Math.max(y+18,sbY+sbH+6);
+
+  // ── WATER CHEMISTRY: range bars + trend arrows ──
+  const pr=st.proj;
+  const hasD=pr.hasD;
+  const trends=calcTrends(v);
+  const bands=chemBands(v,c);
+
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...navy);
+  doc.text('Water Chemistry',margin,y);
+  // Legend, right-aligned on the title line
+  let lx=pw-margin-64;const ly=y-1.2;
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...gray);
+  doc.setDrawColor(120,120,120);doc.setLineWidth(0.4);doc.setFillColor(255,255,255);
+  doc.circle(lx,ly,1.4,'FD');doc.text('Tested',lx+3,ly+1);
+  lx+=16;doc.setFillColor(...gold);doc.circle(lx,ly,1.4,'F');doc.text('After treatment',lx+3,ly+1);
+  lx+=28;doc.setFillColor(...tealLt);doc.rect(lx,ly-1.2,6,2.4,'F');doc.text('Ideal',lx+8,ly+1);
+  y+=8;
+
+  const chemRows=[];
+  function fmt(val,dec){return isNaN(val)?'':(dec?val.toFixed(dec):String(Math.round(val)));}
+  if(v.fc)chemRows.push({k:'fc',t:parseFloat(v.fc),a:hasD&&v.cla?pr.dFC:null,dec:1});
+  if(v.ph)chemRows.push({k:'ph',t:parseFloat(v.ph),a:hasD&&(v.acid||v.bic)?pr.dPH:null,dec:1});
+  if(v.alk)chemRows.push({k:'alk',t:parseFloat(v.alk),a:hasD&&(v.acid||v.bic)?pr.dALK:null,dec:0});
+  if(v.ch)chemRows.push({k:'ch',t:parseFloat(v.ch),a:hasD&&v.cacl?pr.dCH:null,dec:0});
+  if(v.cya)chemRows.push({k:'cya',t:parseFloat(v.cya),a:hasD&&v.cyaa?pr.dCYA:null,dec:0});
+  if(v.salt)chemRows.push({k:'salt',t:parseFloat(v.salt),a:hasD&&v.salta?pr.dSalt:null,dec:0});
+
+  const rowH=9,barX=margin+88,barW=pw-margin-2-barX;
+  chemRows.forEach(r=>{
+    checkPage(rowH);
+    const b=bands[r.k];
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...grayDk);
+    doc.text(b.label,margin+1,y);
+    if(trends&&trends[r.k]!==undefined)drawArrow(margin+31,y,trends[r.k]);
+    const valTxt=(r.a!==null?fmt(r.t,r.dec)+' \u2192 '+fmt(r.a,r.dec):fmt(r.t,r.dec))+(b.unit?' '+b.unit:'');
+    doc.setFontSize(8.5);
+    doc.text(valTxt,margin+37,y);
+    // Bar: track, ideal band, connector, dots
+    const xOf=val=>barX+((Math.max(b.min,Math.min(b.max,val))-b.min)/(b.max-b.min))*barW;
+    doc.setFillColor(...grayLt);doc.roundedRect(barX,y-2.9,barW,2.6,1.3,1.3,'F');
+    doc.setFillColor(...tealLt);
+    const bandX=xOf(b.lo),bandW2=Math.max(1.5,xOf(b.hi)-bandX);
+    doc.roundedRect(bandX,y-2.9,bandW2,2.6,1.3,1.3,'F');
+    const tx=xOf(r.t);
+    if(r.a!==null){
+      const ax=xOf(r.a);
+      doc.setDrawColor(180,180,180);doc.setLineWidth(0.5);
+      doc.line(tx,y-1.6,ax,y-1.6);
+      doc.setFillColor(...gold);doc.circle(ax,y-1.6,1.7,'F');
+    }
+    doc.setDrawColor(120,120,120);doc.setLineWidth(0.45);doc.setFillColor(255,255,255);
+    doc.circle(tx,y-1.6,1.7,'FD');
+    y+=rowH;
+  });
+  if(v.phos){
+    checkPage(6);
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...gray);
+    doc.text('Phosphates: '+v.phos+' ppb',margin+1,y);y+=6;
+  }
+  y+=2;
+
+  // ── WHAT WE DID AND WHY ──
+  checkPage(18);
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...navy);
+  doc.text('What We Did and Why',margin,y);y+=6;
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...grayDk);
+  doc.splitTextToSize(buildNarrative(v,c),cw).forEach(l=>{checkPage(6);doc.text(l,margin,y);y+=4.9;});
+  const wl=weatherLine();
+  if(wl){
+    y+=1.5;checkPage(10);
+    doc.setFont('helvetica','italic');doc.setFontSize(9.5);doc.setTextColor(...tealDk);
+    doc.splitTextToSize(wl,cw).forEach(l=>{checkPage(6);doc.text(l,margin,y);y+=4.7;});
+    doc.setFont('helvetica','normal');doc.setTextColor(...grayDk);
+  }
+  y+=6;
+
+  // ── TREATMENT + SERVICES, side by side ──
   const chm=[];
-  if(v.cla)chm.push('Chlorine treatment');if(v.acid)chm.push('pH balancing (acid)');
+  if(v.cla)chm.push('Chlorine treatment');if(v.acid)chm.push('pH balancing');
   if(v.bic)chm.push('Alkalinity adjustment');if(v.cyaa)chm.push('Stabilizer (CYA) added');
-  if(v.salta)chm.push('Salt added');if(v.cacl)chm.push('Calcium hardness adjustment');
+  if(v.salta)chm.push('Salt added');if(v.cacl)chm.push('Calcium adjustment');
   if(v.pr)chm.push('Phosphate treatment');if(v.oth)chm.push(v.oth);
-
-  if(chm.length>0){
-    checkPage(10+chm.length*6);
-    doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...navy);
-    doc.text('Treatment Applied',margin,y);y+=7;
-    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(51,51,51);
-    chm.forEach(t=>{doc.text('-  '+t,margin+2,y);y+=6;});
-    y+=4;
-  }
-
-  // ── SERVICES PERFORMED ──
   const svcs=[];
   if(v.br)svcs.push('Brushed walls & floor');if(v.tb)svcs.push('Tile brushed');
   if(v.va)svcs.push('Vacuumed');if(v.skm)svcs.push('Skimmed surface');
-  if(v.bw)svcs.push('Backwash / Filter cartridge cleaned');if(v.sk)svcs.push('Cleaned skimmer baskets');
+  if(v.bw)svcs.push('Backwash / Filter cleaned');if(v.sk)svcs.push('Cleaned skimmer baskets');
   if(v.pb)svcs.push('Cleaned pump basket');if(v.pi)svcs.push('Equipment pad inspection');
   if(v.svo)svcs.push(v.svo);
 
-  if(svcs.length>0){
-    checkPage(10+svcs.length*6);
-    doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...navy);
-    doc.text('Services Performed',margin,y);y+=7;
-    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(51,51,51);
-    svcs.forEach(s=>{doc.text('-  '+s,margin+2,y);y+=6;});
+  if(chm.length>0||svcs.length>0){
+    const two=chm.length>0&&svcs.length>0;
+    const colW=two?cw/2-4:cw;
+    const need=10+Math.max(chm.length,svcs.length)*5.4;
+    checkPage(need);
+    doc.setFont('helvetica','bold');doc.setFontSize(11.5);doc.setTextColor(...navy);
+    if(chm.length>0)doc.text('Treatment Applied',margin,y);
+    if(svcs.length>0)doc.text('Services Performed',two?margin+cw/2+4:margin,y);
+    y+=6;
+    doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...grayDk);
+    const maxN=Math.max(chm.length,svcs.length);
+    for(let i=0;i<maxN;i++){
+      if(chm[i])doc.splitTextToSize('-  '+chm[i],colW).forEach((l,j)=>{if(j===0)doc.text(l,margin+1,y);});
+      if(svcs[i])doc.splitTextToSize('-  '+svcs[i],colW).forEach((l,j)=>{if(j===0)doc.text(l,(two?margin+cw/2+5:margin+1),y);});
+      y+=5.4;
+    }
     y+=4;
   }
 
   // ── LIGHTNING SAFETY NOTICE ──
   if(v.ltg){
-    checkPage(16);
+    checkPage(14);
     doc.setFont('helvetica','italic');doc.setFontSize(9);doc.setTextColor(120,92,0);
-    const ltgLines=doc.splitTextToSize('Pole work (brushing, vacuuming) was not performed this visit due to lightning in the area. This is a standard safety precaution.',cw);
-    ltgLines.forEach(l=>{doc.text(l,margin,y);y+=5;});
+    doc.splitTextToSize('Pole work (brushing, vacuuming) was not performed this visit due to lightning in the area. This is a standard safety precaution.',cw).forEach(l=>{doc.text(l,margin,y);y+=4.7;});
     y+=4;
-    doc.setFont('helvetica','normal');doc.setTextColor(51,51,51);
+    doc.setFont('helvetica','normal');doc.setTextColor(...grayDk);
   }
 
-  // ── NOTE TO CLIENT ──
+  // ── NOTE FROM YOUR TECH ──
   const clientNote=v.ntc||(v.notes&&!v.act&&!v.eq?v.notes:null);
   if(clientNote){
     checkPage(15);
     doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...navy);
-    doc.text('Note from Your Tech',margin,y);y+=7;
-    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(51,51,51);
-    const nLines=doc.splitTextToSize(clientNote,cw);
-    nLines.forEach(ln=>{checkPage(6);doc.text(ln,margin+2,y);y+=5;});
+    doc.text('Note from Your Tech',margin,y);y+=6;
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...grayDk);
+    doc.splitTextToSize(clientNote,cw).forEach(ln=>{checkPage(6);doc.text(ln,margin+2,y);y+=5;});
     y+=4;
   }
 
-  // ── PHOTOS ──
+  // ── PHOTOS: before/after pairs, side by side ──
   const pdfPh2b=v.ph2b||[];const pdfPh2a=v.ph2a||[];const pdfPh2legacy=v.ph2||[];
-  const pdfPhotos=pdfPh2b.length||pdfPh2a.length?[...pdfPh2b,...pdfPh2a]:pdfPh2legacy;
-  if(pdfPhotos.length>0){
-    doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...navy);
-    
-    for(let i=0;i<pdfPhotos.length;i++){
+  const hasPairs=pdfPh2b.length>0||pdfPh2a.length>0;
+  const halfW=(cw-8)/2;
+  function imgSize(imgData,maxW,maxH){
+    let w=maxW,h=maxW*0.75;
+    try{
+      const img=new Image();img.src=imgData;
+      if(img.width&&img.height){
+        const ratio=img.width/img.height;
+        if(ratio>maxW/maxH){w=maxW;h=maxW/ratio;}else{h=maxH;w=maxH*ratio;}
+      }
+    }catch(e){}
+    if(h>maxH)h=maxH;
+    return {w:w,h:h};
+  }
+  if(hasPairs){
+    const nPairs=Math.max(pdfPh2b.length,pdfPh2a.length);
+    let headed=false;
+    for(let i=0;i<nPairs;i++){
+      const bImg=pdfPh2b[i]||null,aImg=pdfPh2a[i]||null;
+      const bS=bImg?imgSize(bImg,halfW,72):null;
+      const aS=aImg?imgSize(aImg,halfW,72):null;
+      const rowNeed=Math.max(bS?bS.h:0,aS?aS.h:0)+14;
+      checkPage(rowNeed+(headed?0:10));
+      if(!headed){
+        doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...navy);
+        doc.text('Before & After',margin,y);y+=7;headed=true;
+      }
+      doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...gray);
       try{
-        const imgData=pdfPhotos[i];
-        // Load image to get aspect ratio
-        const img=new Image();
-        img.src=imgData;
-        const maxW=cw-10;
-        const maxH=80;
-        let imgW=maxW,imgH=maxH;
-        // Try to maintain aspect ratio
-        if(img.width&&img.height){
-          const ratio=img.width/img.height;
-          if(ratio>maxW/maxH){imgW=maxW;imgH=maxW/ratio;}
-          else{imgH=maxH;imgW=maxH*ratio;}
-        }
-        // Check if photo fits on current page, if not start new page
-        checkPage(imgH+15);
-        if(i===0){
-          doc.text(pdfPh2b.length||pdfPh2a.length?'Photos — Before & After':'Photos',margin,y);y+=7;
-        }
-        doc.addImage(imgData,'JPEG',margin+5,y,imgW,imgH);
-        y+=imgH+8;
+        if(bImg){doc.text('BEFORE',margin,y);doc.addImage(bImg,'JPEG',margin,y+2,bS.w,bS.h);}
+        if(aImg){doc.text('AFTER',margin+halfW+8,y);doc.addImage(aImg,'JPEG',margin+halfW+8,y+2,aS.w,aS.h);}
+      }catch(e){console.log('Photo embed error',e);}
+      y+=rowNeed;
+    }
+    y+=2;
+  }else if(pdfPh2legacy.length>0){
+    let headed=false;
+    for(let i=0;i<pdfPh2legacy.length;i++){
+      try{
+        const s=imgSize(pdfPh2legacy[i],cw-10,80);
+        checkPage(s.h+15);
+        if(!headed){doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...navy);doc.text('Photos',margin,y);y+=7;headed=true;}
+        doc.addImage(pdfPh2legacy[i],'JPEG',margin+5,y,s.w,s.h);
+        y+=s.h+8;
       }catch(e){console.log('Photo embed error',e);}
     }
-    y+=4;
+    y+=2;
   }
 
-  // ── FOOTER ──
-  const footY=ph-12;
-  doc.setDrawColor(...gold);doc.setLineWidth(0.8);
-  doc.line(margin,footY-3,pw-margin,footY-3);
-  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...gray);
-  doc.text('Ripple Pool Solutions LLC · Port St. Lucie, FL · Luxury in Every Ripple',pw/2,footY+2,{align:'center'});
+  // ── FOOTER on every page ──
+  const nPages=doc.getNumberOfPages();
+  for(let p=1;p<=nPages;p++){
+    doc.setPage(p);
+    const footY=ph-12;
+    doc.setDrawColor(...gold);doc.setLineWidth(0.8);
+    doc.line(margin,footY-3,pw-margin,footY-3);
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...gray);
+    doc.text('Ripple Pool Solutions LLC \u00B7 Port St. Lucie, FL \u00B7 Luxury in Every Ripple',pw/2,footY+2,{align:'center'});
+  }
 
   return doc;
 }
@@ -2498,20 +2717,72 @@ async function emailWithPDFLocal(){
 }
 
 function buildEmailHTML(v,c){
-  let status='Serviced';
-  if(v.lsi!==null&&v.lsi!==undefined){status=(v.lsi>=-0.3&&v.lsi<=0.3)?'Balanced':'Treated & Adjusted';}
-  const note=v.ntc?'<p style="margin:16px 0 0;font-size:14px;line-height:1.7;color:#333333;"><strong style="color:#0B1D3A;">Note from your tech:</strong><br>'+String(v.ntc).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</p>':'';
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const st=visitStatus(v,c);
+  const pr=st.proj;
+  const statusHex=st.txt==='Treated'?'#eb774f':(st.txt==='Tested'?'#999999':'#27AE60');
+
+  // Mini readings table: shows the water as it leaves (after treatment when dosed)
+  const bands=chemBands(v,c);
+  const rows=[];
+  function addRow(k,val,dec){
+    if(isNaN(val))return;
+    const b=bands[k];
+    const inR=val>=b.lo&&val<=b.hi;
+    rows.push('<tr>'
+      +'<td style="padding:7px 4px;font-size:13px;color:#333333;border-bottom:1px solid #eeeeee;">'+b.label+'</td>'
+      +'<td style="padding:7px 4px;font-size:13px;font-weight:bold;color:#0B1D3A;border-bottom:1px solid #eeeeee;">'+(dec?val.toFixed(dec):Math.round(val))+(b.unit?' '+b.unit:'')+'</td>'
+      +'<td style="padding:7px 4px;font-size:12px;font-weight:bold;text-align:right;border-bottom:1px solid #eeeeee;color:'+(inR?'#029b96':'#999999')+';">'+(inR?'In range':'Monitoring')+'</td>'
+      +'</tr>');
+  }
+  if(v.fc)addRow('fc',pr.hasD&&v.cla?pr.dFC:parseFloat(v.fc),1);
+  if(v.ph)addRow('ph',pr.hasD&&(v.acid||v.bic)?pr.dPH:parseFloat(v.ph),1);
+  if(v.alk)addRow('alk',pr.hasD&&(v.acid||v.bic)?pr.dALK:parseFloat(v.alk),0);
+  if(v.ch)addRow('ch',pr.hasD&&v.cacl?pr.dCH:parseFloat(v.ch),0);
+  if(v.cya)addRow('cya',pr.hasD&&v.cyaa?pr.dCYA:parseFloat(v.cya),0);
+  if(v.salt)addRow('salt',pr.hasD&&v.salta?pr.dSalt:parseFloat(v.salt),0);
+  const tableHTML=rows.length?'<table style="width:100%;border-collapse:collapse;margin:16px 0 4px;">'
+    +'<tr><td style="padding:0 4px 4px;font-size:11px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:0.5px;">Parameter</td>'
+    +'<td style="padding:0 4px 4px;font-size:11px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:0.5px;">Reading</td><td></td></tr>'
+    +rows.join('')+'</table>':'';
+
+  // What we did today (shared narrative engine)
+  const didHTML='<p style="margin:18px 0 4px;font-size:14px;font-weight:bold;color:#0B1D3A;">What we did today</p>'
+    +'<p style="margin:0;font-size:14px;line-height:1.7;color:#333333;">'+buildNarrative(v,c)+'</p>';
+
+  // Conditional blocks
+  const streak=balancedStreak(v,c);
+  const streakHTML=streak>=3?'<div style="margin:16px 0 0;padding:10px 14px;background:#f0fbfa;border-left:3px solid #06bab5;font-size:13px;color:#333333;">Your water has held <strong style="color:#029b96;">Balanced</strong> for '+streak+' straight visits.</div>':'';
+  const wl=weatherLine();
+  const wlHTML=wl?'<p style="margin:16px 0 0;font-size:13px;line-height:1.6;font-style:italic;color:#666666;">'+wl+'</p>':'';
+  const ds=darkStripNote(v,c);
+  const dsHTML=ds?'<p style="margin:16px 0 0;font-size:13px;line-height:1.6;font-style:italic;color:#666666;">'+ds+'</p>':'';
+  const note=v.ntc?'<p style="margin:16px 0 0;font-size:14px;line-height:1.7;color:#333333;"><strong style="color:#0B1D3A;">Note from your tech:</strong><br>'+esc(v.ntc).replace(/\n/g,'<br>')+'</p>':'';
+  const fu=(v.ofn&&!v.ofnDone)?'<p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#666666;">We also flagged a maintenance item during this visit and are keeping an eye on it. If anything needs your attention, we will reach out directly.</p>':'';
+  const tip=seasonalTip(v.dt);
+  const tipHTML=tip?'<div style="margin:18px 0 0;padding:10px 14px;background:#f7f7f7;border-radius:6px;font-size:12.5px;line-height:1.6;color:#555555;"><strong style="color:#0B1D3A;">Pool tip:</strong> '+tip+'</div>':'';
+
   return '<div style="max-width:560px;margin:0 auto;">'
-    +'<div style="background:#0B1D3A;padding:22px 24px;text-align:center;">'
-    +'<div style="color:#eb774f;font-size:22px;font-weight:bold;font-family:Georgia,\'Times New Roman\',serif;">Ripple Pool Solutions</div>'
-    +'<div style="color:#eb774f;font-size:12px;font-style:italic;font-family:Georgia,serif;margin-top:4px;">Luxury in Every Ripple</div></div>'
+    +'<div style="background:#06bab5;padding:22px 24px;text-align:center;">'
+    +'<div style="color:#0B1D3A;font-size:22px;font-weight:bold;font-family:Georgia,\'Times New Roman\',serif;">Ripple Pool Solutions</div>'
+    +'<div style="color:#0B1D3A;font-size:12px;font-style:italic;font-family:Georgia,serif;margin-top:4px;">Luxury in Every Ripple</div></div>'
     +'<div style="border-top:3px solid #eb774f;background:#ffffff;padding:24px;font-family:Arial,Helvetica,sans-serif;">'
-    +'<p style="font-size:15px;color:#333333;margin:0 0 14px;">Hi '+c.fn+',</p>'
-    +'<p style="font-size:14px;line-height:1.7;color:#333333;margin:0;">Your pool was serviced today, '+v.dt+'. Today\'s water status: <strong style="color:#029b96;">'+status+'</strong>. Your full RippleCare report is attached with readings, treatments performed, and photos.</p>'
+    +'<p style="font-size:15px;color:#333333;margin:0;">Hi '+esc(c.fn)+',</p>'
+    +'<div style="text-align:center;margin:16px 0 4px;"><span style="display:inline-block;padding:6px 20px;border-radius:20px;background:'+statusHex+';color:#ffffff;font-size:14px;font-weight:bold;">'+st.txt+'</span></div>'
+    +'<p style="font-size:14px;line-height:1.7;color:#333333;margin:12px 0 0;">Your pool was serviced today, '+v.dt+'. Here is how your water looks and what we did.</p>'
+    +tableHTML
+    +didHTML
+    +streakHTML
+    +wlHTML
+    +dsHTML
     +note
-    +'<p style="font-size:13px;line-height:1.6;color:#666666;margin:18px 0 0;">Questions about your pool? Just reply to this email.</p>'
+    +fu
+    +'<p style="font-size:14px;line-height:1.7;color:#333333;margin:18px 0 0;">Enjoy your pool. We\'ll see you next week.</p>'
+    +tipHTML
+    +'<p style="font-size:13px;line-height:1.6;color:#666666;margin:18px 0 0;">Thank you for choosing Ripple Pool Solutions. Questions about this visit are always welcome; simply reply to this email.</p>'
+    +'<p style="font-size:12px;line-height:1.6;color:#999999;margin:14px 0 0;">Your full RippleCare report is attached with complete readings, treatments, and photos.</p>'
     +'</div>'
-    +'<div style="border-top:1px solid #eb774f;padding:14px;text-align:center;font-size:11px;color:#999999;font-family:Arial,sans-serif;">Ripple Pool Solutions LLC · Port St. Lucie, FL · Luxury in Every Ripple</div></div>';
+    +'<div style="border-top:1px solid #eb774f;padding:14px;text-align:center;font-size:11px;color:#999999;font-family:Arial,sans-serif;">Ripple Pool Solutions LLC \u00B7 Port St. Lucie, FL \u00B7 Luxury in Every Ripple</div></div>';
 }
 
 function buildReportText(v,c){
@@ -2671,24 +2942,51 @@ function exportXLSX(){
   ws2['!cols']=[{wch:25},{wch:18},{wch:18},{wch:20},{wch:8},{wch:20}];
   XLSX.utils.book_append_sheet(wb,ws2,'Equipment');
 
-  // ── SHEET 3: VISIT LOG ──
-  const vHeaders=['Date','Start Time','End Time','Duration','Client','Address','Temp °F','FC ppm','pH','Alk ppm','CH ppm','CYA ppm','Salt ppm','Phosphates ppb','TDS','LSI','LSI Status',
+  // ── SHEET 3: VISIT LOG (wide row: one visit, every field) ──
+  function _dep(v,c){
+    if(v.wst!==undefined&&v.wst!==null)return v; // stored at save time (v7.2+)
+    if(!c)return {};
+    try{
+      const st=visitStatus(v,c);const pr=st.proj;
+      return {wst:st.txt,dlsi:(st.lsi!==null&&st.lsi!==undefined&&!isNaN(st.lsi))?+st.lsi.toFixed(2):null,
+        dfc:v.fc?+pr.dFC.toFixed(1):null,dph:v.ph?+pr.dPH.toFixed(2):null,dalk:v.alk?Math.round(pr.dALK):null,
+        dch:v.ch?Math.round(pr.dCH):null,dcya:v.cya?Math.round(pr.dCYA):null,dslt:v.salt?Math.round(pr.dSalt):null};
+    }catch(e){return {};}
+  }
+  const vHeaders=['Visit ID','Client ID','Date','Start Time','End Time','Duration','Client','Address',
+    'Temp °F','FC ppm','pH','Alk ppm','CH ppm','CYA ppm','Salt ppm','Phosphates ppb','TDS','LSI','LSI Status',
     'Cl Added gal','Acid gal','Bicarb lbs','CYA lbs','Salt lbs','CaCl lbs','Phos Rem oz','Other Chems',
+    'Dep FC ppm','Dep pH','Dep Alk ppm','Dep CH ppm','Dep CYA ppm','Dep Salt ppm','Dep LSI','Water Status',
+    'Weather Rate ppm/day','Measured Decay ppm/day','Lightning',
     'Brushed','Tile Brushed','Vacuumed','Skimmed','BW/Filter','Skimmer Baskets','Pump Basket','Pad Inspect','Other Service',
-    'Note to Client','Next Visit Notes','Office Notes','Report Sent'];
+    'Note to Client','Next Visit Notes','Office Notes','Photos Before','Photos After','Photos Archived','Drive Folder','Report Sent','Modified'];
   const vData=[...DB.visits].sort((a,b)=>b.dt.localeCompare(a.dt)).map(v=>{
     const c=DB.clients.find(x=>x.id===v.cid);
     const dur=v.tstart&&v.tm?calcDur(v.tstart,v.tm):'';
-    return[v.dt,v.tstart||'',v.tm||'',dur,c?c.ln+', '+c.fn:'',c?c.ad:'',
+    const d=_dep(v,c);
+    const nn=x=>(x===null||x===undefined)?'':x;
+    return[v.vid||'',v.cid,v.dt,v.tstart||'',v.tm||'',dur,c?c.ln+', '+c.fn:'',c?c.ad:'',
       v.temp?+v.temp:'',v.fc?+v.fc:'',v.ph?+v.ph:'',v.alk?+v.alk:'',v.ch?+v.ch:'',v.cya?+v.cya:'',v.salt?+v.salt:'',v.phos?+v.phos:'',v.tds?+v.tds:'',
-      v.lsi!==null&&v.lsi!==undefined?+v.lsi.toFixed(2):'',v.lsi!==null?ll(v.lsi):'',
+      v.lsi!==null&&v.lsi!==undefined?+v.lsi.toFixed(2):'',v.lsi!==null&&v.lsi!==undefined?ll(v.lsi):'',
       v.cla?+v.cla:'',v.acid?+v.acid:'',v.bic?+v.bic:'',v.cyaa?+v.cyaa:'',v.salta?+v.salta:'',v.cacl?+v.cacl:'',v.pr?+v.pr:'',v.oth||'',
+      nn(d.dfc),nn(d.dph),nn(d.dalk),nn(d.dch),nn(d.dcya),nn(d.dslt),nn(d.dlsi),d.wst||'',
+      nn(v.wxr),v.mdec?+v.mdec:'',v.ltg?'Y':'N',
       v.br?'Y':'N',v.tb?'Y':'N',v.va?'Y':'N',v.skm?'Y':'N',v.bw?'Y':'N',v.sk?'Y':'N',v.pb?'Y':'N',v.pi?'Y':'N',v.svo||'',
-      v.ntc||v.notes||'',v.nvn||v.act||'',v.ofn||v.eq||'',v.sent?'Y':'N'];
+      v.ntc||v.notes||'',v.nvn||v.act||'',v.ofn||v.eq||'',
+      (v.ph2b||[]).length,(v.ph2a||[]).length,v.pharch||0,(v.phlk&&v.phlk.folder)||'',
+      v.sent?'Y':'N',v.mt?new Date(v.mt).toISOString():''];
   });
   const ws3=XLSX.utils.aoa_to_sheet([vHeaders,...vData]);
   ws3['!cols']=vHeaders.map(h=>({wch:Math.max(h.length+2,10)}));
   XLSX.utils.book_append_sheet(wb,ws3,'Visit Log');
+
+  // ── SHEET 3b: FOLLOW-UPS ──
+  const fHeaders=['Client','Note','Created'];
+  const fData=[];
+  DB.clients.forEach(c=>{(c.followups||[]).forEach(f=>fData.push([c.ln+', '+c.fn,f.text||'',f.dt||'']));});
+  const wsF=XLSX.utils.aoa_to_sheet([fHeaders,...fData]);
+  wsF['!cols']=[{wch:25},{wch:60},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,wsF,'Follow-ups');
 
   // ── SHEET 4: WEEKLY SUMMARY (pivot by client) ──
   const sumHeaders=['Client','Total Visits','Last Visit','Avg FC','Avg pH','Avg Alk','Avg CH','Avg CYA','Last LSI','Cl Used gal','Acid Used gal','Bicarb Used lbs'];
@@ -2709,7 +3007,8 @@ function exportXLSX(){
   const td=localDate();
   XLSX.writeFile(wb,'Ripple_Pool_Solutions_'+td+'.xlsx');
   try{localStorage.setItem('ripple_last_export',td);}catch(e){}
-  toast('Excel exported!');
+  toast('Exported '+DB.visits.length+' visits, '+DB.clients.length+' clients');
+  if(SYNC.horizon){setTimeout(()=>alert('Note: this device is trimmed before '+SYNC.horizon+', so this export is a partial view. The Drive master (ripple_master.json) holds the complete history.'),400);}
   setTimeout(()=>{
     const cutoff2=new Date();cutoff2.setDate(cutoff2.getDate()-30);
     const oldCount=DB.visits.filter(v=>new Date(v.dt)<cutoff2).length;
