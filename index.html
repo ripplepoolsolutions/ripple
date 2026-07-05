@@ -76,6 +76,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 .fbtn{background:var(--gold);color:white;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;}
 .fi-gold{border-color:var(--gold)!important;box-shadow:0 0 0 3px rgba(196,151,92,0.25)!important;background:#fffbeb!important;}
 .toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--navy);color:var(--gold);padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:300;opacity:0;transition:all 0.3s;pointer-events:none;}.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+#flow-banner{position:fixed;top:0;left:0;right:0;z-index:400;display:none;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:white;background:var(--navy);box-shadow:0 3px 12px rgba(0,0,0,0.3);align-items:center;gap:8px;flex-wrap:wrap;}
+#flow-banner.show{display:flex;}
+#flow-banner.warn{background:var(--red);}
+.fb-btn{border:none;border-radius:8px;padding:8px 12px;font-weight:600;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;background:white;color:var(--navy);}
+.fb-ghost{background:transparent;color:white;border:1px solid rgba(255,255,255,0.5);}
+.flow-cd{border-left:4px solid var(--teal);}
 </style>
 </head>
 <body>
@@ -139,7 +146,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="toast" id="toast"></div>
 
 <!-- DASHBOARD -->
-<div class="pg act" id="pg-dash"><div id="draft-card"></div><div class="sg" id="ds"></div><div id="summer-badge-wrap" style="margin-bottom:10px;"></div><div id="unsent-section"></div><div class="cd" style="padding:12px 16px;"><div class="ch" style="margin-bottom:8px;">Data Management</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span id="storage-lbl" style="font-size:11px;color:var(--g400);">Storage: calculating...</span><span id="storage-visit-count" style="font-size:11px;color:var(--g400);"></span></div><div style="background:var(--g100);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;"><div id="storage-bar" style="height:100%;border-radius:4px;background:var(--teal);width:0%;transition:width 0.5s;"></div></div><div style="display:flex;gap:8px;margin-bottom:8px;"><button onclick="dlBackup()" style="flex:1;border:1px solid var(--teal);background:none;color:var(--teal);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💾 Back Up</button><button onclick="showPurgeMo()" style="flex:1;border:1px solid var(--gold);background:none;color:var(--gold);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Trim Old Visits</button></div><div style="display:flex;gap:8px;"><button onclick="showClearPhotos()" style="flex:1;border:1px solid var(--red);background:none;color:var(--red);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🧹 Clear All Photos</button></div><div style="display:flex;gap:8px;margin-top:8px;align-items:stretch;"><button onclick="syncNow(false)" style="flex:1;border:none;background:var(--navy);color:white;border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Sync Now</button><button onclick="openSyncSetup()" style="width:46px;border:1px solid var(--g200);background:none;color:var(--g600);border-radius:8px;padding:9px;font-size:14px;cursor:pointer;">⚙️</button></div><div id="sync-status" style="font-size:11px;color:var(--g400);margin-top:6px;text-align:center;">Sync not set up — tap ⚙️</div></div><div class="cd"><div class="ch">Today's Route</div><div id="dr"></div></div><div class="cd"><div class="ch">Recent Visits</div><div id="dv"></div></div></div>
+<div class="pg act" id="pg-dash"><div id="draft-card"></div><div id="flow-card"></div><div class="sg" id="ds"></div><div id="summer-badge-wrap" style="margin-bottom:10px;"></div><div id="unsent-section"></div><div class="cd" style="padding:12px 16px;"><div class="ch" style="margin-bottom:8px;">Data Management</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span id="storage-lbl" style="font-size:11px;color:var(--g400);">Storage: calculating...</span><span id="storage-visit-count" style="font-size:11px;color:var(--g400);"></span></div><div style="background:var(--g100);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;"><div id="storage-bar" style="height:100%;border-radius:4px;background:var(--teal);width:0%;transition:width 0.5s;"></div></div><div style="display:flex;gap:8px;margin-bottom:8px;"><button onclick="dlBackup()" style="flex:1;border:1px solid var(--teal);background:none;color:var(--teal);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💾 Back Up</button><button onclick="showPurgeMo()" style="flex:1;border:1px solid var(--gold);background:none;color:var(--gold);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Trim Old Visits</button></div><div style="display:flex;gap:8px;"><button onclick="showClearPhotos()" style="flex:1;border:1px solid var(--red);background:none;color:var(--red);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🧹 Clear All Photos</button></div><div style="display:flex;gap:8px;margin-top:8px;align-items:stretch;"><button onclick="syncNow(false)" style="flex:1;border:none;background:var(--navy);color:white;border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Sync Now</button><button onclick="openSyncSetup()" style="width:46px;border:1px solid var(--g200);background:none;color:var(--g600);border-radius:8px;padding:9px;font-size:14px;cursor:pointer;">⚙️</button></div><div id="sync-status" style="font-size:11px;color:var(--g400);margin-top:6px;text-align:center;">Sync not set up — tap ⚙️</div></div><div class="cd"><div class="ch">Today's Route</div><div id="dr"></div></div><div class="cd"><div class="ch">Recent Visits</div><div id="dv"></div></div></div>
 
 <!-- CLIENTS -->
 <div class="pg" id="pg-cli"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h2 style="font-family:'Playfair Display',serif;color:var(--navy);font-size:20px;">Clients</h2><button class="btn bp bsm" onclick="openAdd()">+ Add</button></div><input type="text" class="fi" placeholder="Search..." id="csrch" oninput="rCli()" style="margin-bottom:12px;"><div id="clist"></div></div>
@@ -271,7 +278,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="mo" id="mo-v"><div class="ml"><div class="mh"><span id="vn">Client</span><button class="mx" onclick="closeM('mo-v')">&times;</button></div><div id="vcon"></div><div style="display:flex;gap:8px;margin-top:14px;"><button class="btn bp" onclick="editFV()" style="flex:1">Edit</button><button class="btn bg" onclick="logFV()" style="flex:1">Log Visit</button></div></div></div>
 
 <!-- REPORT MODAL -->
-<div class="mo" id="mo-r"><div class="ml"><div class="mh"><span>Visit Report</span><button class="mx" onclick="closeM('mo-r')">&times;</button></div><div id="rcon"></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;"><button class="btn bp" onclick="shareReport()" id="btn-share">📤 Share PDF Report</button><button class="btn bg" onclick="emailWithPDF()">📧 Email Report to Client</button><div style="display:flex;gap:8px;"><button class="btn bs" onclick="copyRpt()" style="flex:1">Copy Text</button><button class="btn bs" onclick="markSent()" style="flex:1" id="btn-sent">✓ Mark as Sent</button></div></div></div></div>
+<div class="mo" id="mo-r"><div class="ml"><div class="mh"><span>Visit Report</span><button class="mx" onclick="closeM('mo-r')">&times;</button></div><div id="rcon"></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;"><button class="btn bp" onclick="shareReport()" id="btn-share">📤 Share PDF Report</button><button class="btn bg" onclick="emailWithPDF()">📧 Email Report to Client</button><button class="btn bs" onclick="downloadPDF()">⬇️ Download PDF</button><div style="display:flex;gap:8px;"><button class="btn bs" onclick="copyRpt()" style="flex:1">Copy Text</button><button class="btn bs" onclick="markSent()" style="flex:1" id="btn-sent">✓ Mark as Sent</button></div></div></div></div>
 
 <!-- VISIT DETAIL MODAL -->
 <div class="mo" id="mo-vd"><div class="ml"><div class="mh"><span id="vd-title">Visit Details</span><button class="mx" onclick="closeM('mo-vd')">&times;</button></div><div id="vd-con"></div><div style="display:flex;gap:8px;margin-top:14px;"><button class="btn bp" onclick="editVisit()">Edit Visit</button><button class="btn bg" onclick="rptFromDetail()">Generate Report</button></div></div></div>
@@ -373,6 +380,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
   </div>
 </div></div>
 
+<div id="flow-banner"></div>
+<div class="mo" id="mo-next"><div class="ml"><div class="mh"><span id="mo-next-title">Next Stop</span><button class="mx" onclick="closeM('mo-next')">&times;</button></div><div id="mo-next-body"></div></div></div>
+<div class="mo" id="mo-skip"><div class="ml"><div class="mh"><span>Skip Stop</span><button class="mx" onclick="closeM('mo-skip')">&times;</button></div><div id="mo-skip-body"></div></div></div>
+
 <nav class="bnav">
 <button class="ni act" onclick="nav('dash',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Home</button>
 <button class="ni" onclick="nav('cli',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>Clients</button>
@@ -383,7 +394,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.2';
+const APP_VER='v7.3';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -395,6 +406,214 @@ function weekVisited(cid){
   const satEnd=new Date(sunStart);satEnd.setDate(sunStart.getDate()+6);satEnd.setHours(23,59,59,999);
   return DB.visits.some(v=>v.cid===cid&&(()=>{const vd=new Date(v.dt+'T12:00:00');return vd>=sunStart&&vd<=satEnd;})());
 }
+
+/* ═══════════ v7.3 GUIDED ROUTE FLOW ═══════════ */
+const FK='ripple_flow_v1';
+function flowGet(){let f=null;try{f=JSON.parse(localStorage.getItem(FK)||'null');}catch(e){}
+  const td=localDate();
+  if(!f||f.dt!==td)f={dt:td,armed:null,cb:[],defer:[],kick:false};
+  f.cb=f.cb||[];f.defer=f.defer||[];
+  return f;}
+function flowSave(f){try{localStorage.setItem(FK,JSON.stringify(f));}catch(e){}}
+/*FLOW-PURE-START*/
+function dayNameOf(dt){return['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dt.getDay()];}
+function lastDue(c,now){
+  // Most recent calendar date STRICTLY before "now" matching the client's service day.
+  // Deliberately not week-based: a Thursday miss must survive the Sunday week rollover.
+  const names=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const target=names.indexOf(c.sd);if(target<0)return null;
+  const base=new Date(now||new Date());base.setHours(12,0,0,0);
+  for(let i=1;i<=7;i++){const d=new Date(base);d.setDate(base.getDate()-i);if(d.getDay()===target)return d;}
+  return null;}
+function isMissed(c,now){
+  if(c.st!=='Active')return false;
+  const n=now||new Date();
+  if(c.sd===dayNameOf(n))return false; // today's stops belong to today's route, not catch-up
+  const due=lastDue(c,n);if(!due)return false;
+  const dueStr=localDate(due);
+  return !DB.visits.some(v=>v.cid===c.id&&v.dt>=dueStr);
+}
+function missedStops(now){return DB.clients.filter(c=>isMissed(c,now)).sort((a,b)=>(a.ro||999)-(b.ro||999)||a.ln.localeCompare(b.ln));}
+function todayRouteStops(now){const dn=dayNameOf(now||new Date());return DB.clients.filter(c=>c.st==='Active'&&c.sd===dn).sort((a,b)=>(a.ro||999)-(b.ro||999)||a.ln.localeCompare(b.ln));}
+function visitedToday(cid,now){const td=localDate(now||new Date());return DB.visits.some(v=>v.cid===cid&&v.dt===td);}
+function flowQueue(now){
+  const f=flowGet();
+  const miss=missedStops(now).filter(c=>!visitedToday(c.id,now)&&!f.defer.includes(c.id));
+  const route=todayRouteStops(now).filter(c=>!visitedToday(c.id,now)&&!f.defer.includes(c.id));
+  return{
+    missed:miss.filter(c=>!f.cb.includes(c.id)),
+    regular:route.filter(c=>!f.cb.includes(c.id)),
+    cb:route.filter(c=>f.cb.includes(c.id)).concat(miss.filter(c=>f.cb.includes(c.id)))
+  };
+}
+function flowNext(now){const q=flowQueue(now);return q.missed[0]||q.regular[0]||q.cb[0]||null;}
+function flowAfterSave(cid){const f=flowGet();cid=parseInt(cid);
+  if(f.armed===cid)f.armed=null;
+  f.cb=f.cb.filter(x=>x!==cid);f.defer=f.defer.filter(x=>x!==cid);
+  flowSave(f);}
+/*FLOW-PURE-END*/
+function nextMaps(cid){const c=DB.clients.find(x=>x.id===cid);if(!c)return;closeM('mo-next');openMaps(c.ad,c.ci||'',cid);}
+function openNext(auto){
+  const q=flowQueue();const c=flowNext();
+  const body=document.getElementById('mo-next-body');const title=document.getElementById('mo-next-title');
+  if(!body||!title)return;
+  if(!c){if(!auto){title.textContent='Route Flow';body.innerHTML='<div class="emp">Nothing in the queue. You are all caught up. 🎉</div>';openM('mo-next');}return;}
+  const f=flowGet();
+  const isMiss=q.missed.length>0&&q.missed[0].id===c.id;
+  const isCb=f.cb.includes(c.id);
+  title.textContent=isMiss?'Catch-Up Stop':(isCb?'Circle-Back Stop':'Next Stop');
+  body.innerHTML=`
+    ${isMiss?`<div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:4px;letter-spacing:0.5px;">⏪ MISSED ${(c.sd||'').toUpperCase()} — PRIORITY</div>`:''}
+    ${isCb?`<div style="font-size:11px;font-weight:700;color:var(--yel);margin-bottom:4px;letter-spacing:0.5px;">↩ CIRCLE-BACK</div>`:''}
+    <div style="font-size:17px;font-weight:600;color:var(--navy);font-family:'Playfair Display',serif;">${c.ln}, ${c.fn}</div>
+    <div style="font-size:13px;color:var(--g600);margin:4px 0 14px;line-height:1.5;">${c.ad}${c.ci?', '+c.ci:''}<br>🔑 Gate: ${c.gc||'N/A'} · Walk: ${c.gs||'?'}${c.dg?' · 🐕 '+c.dg+' ('+(c.df||'?')+')':''}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn bp" onclick="nextMaps(${c.id})">🗺 Open in Maps</button>
+      <button class="btn bs" onclick="openSkip(${c.id})">⏭ Skip this stop</button>
+      <button class="btn bs" onclick="closeM('mo-next')">Close</button>
+    </div>`;
+  openM('mo-next');
+}
+function openSkip(cid){
+  const c=DB.clients.find(x=>x.id===cid);if(!c)return;
+  closeM('mo-next');
+  document.getElementById('mo-skip-body').innerHTML=`
+    <div style="font-size:14px;color:var(--g800);margin-bottom:14px;">Skipping <b>${c.ln}, ${c.fn}</b>. What should happen to this stop?</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn bp" onclick="doSkip(${c.id},'cb')">↩ Circle back later today</button>
+      <button class="btn bg" onclick="doSkip(${c.id},'defer')">📅 Move to tomorrow (leads the queue)</button>
+      <button class="btn bs" onclick="closeM('mo-skip')">Cancel</button>
+    </div>`;
+  openM('mo-skip');
+}
+function doSkip(cid,mode){
+  const f=flowGet();
+  if(mode==='cb'){if(!f.cb.includes(cid))f.cb.push(cid);f.defer=f.defer.filter(x=>x!==cid);toast('↩ Will circle back today');}
+  else{if(!f.defer.includes(cid))f.defer.push(cid);f.cb=f.cb.filter(x=>x!==cid);if(f.armed===cid)f.armed=null;toast('📅 Moved to tomorrow');}
+  flowSave(f);closeM('mo-skip');
+  try{renderFlowCard();rDash();}catch(e){}
+  setTimeout(function(){openNext(true);},250);
+}
+function openCbNudge(){
+  const q=flowQueue();if(!q.cb.length)return;
+  const body=document.getElementById('mo-next-body');const title=document.getElementById('mo-next-title');
+  title.textContent='Circle-Backs Outstanding';
+  const list=q.cb.map(c=>`<div style="padding:6px 0;border-bottom:1px solid var(--g100);font-size:13px;"><b>${c.ln}, ${c.fn}</b> <span style="color:var(--g400);">· ${c.ad}</span></div>`).join('');
+  body.innerHTML=`<div style="font-size:13px;color:var(--g600);margin-bottom:8px;">Normal route done! ${q.cb.length} circle-back stop${q.cb.length>1?'s':''} outstanding:</div>${list}
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">
+      <button class="btn bp" onclick="nextMaps(${q.cb[0].id})">🗺 Head to ${q.cb[0].ln}</button>
+      <button class="btn bg" onclick="cbAllTomorrow()">📅 Move all to tomorrow</button>
+      <button class="btn bs" onclick="closeM('mo-next')">Later</button>
+    </div>`;
+  openM('mo-next');
+}
+function cbAllTomorrow(){
+  const f=flowGet();
+  flowQueue().cb.forEach(c=>{if(!f.defer.includes(c.id))f.defer.push(c.id);});
+  f.cb=[];flowSave(f);closeM('mo-next');
+  toast('📅 Moved to tomorrow — they will lead tomorrow\u2019s queue');
+  try{renderFlowCard();rDash();}catch(e){}
+  const q=flowQueue();
+  if(!q.missed.length&&!q.regular.length&&!q.cb.length)setTimeout(routeCelebrate,450);
+}
+function routeCelebrate(){
+  alert('🎉 Route complete! All stops handled for today.'+(syncReady()?'\n\n🔄 Sync carries today\u2019s visits and photos to your laptop automatically. A 💾 backup now and then is still smart.':'\n\n📲 Don\u2019t forget:\n1. Tap 💾 to download your backup JSON\n2. Email it to yourself\n3. Load it on your laptop tonight'));
+}
+function flowAfterSaveUI(){
+  const f=flowGet();
+  const anyToday=todayRouteStops().length>0||missedStops().length>0||f.defer.length>0;
+  if(!anyToday)return;
+  const q=flowQueue();
+  if(q.missed.length||q.regular.length){openNext(true);}
+  else if(q.cb.length){openCbNudge();}
+  else{routeCelebrate();}
+}
+function renderFlowCard(){
+  const el=document.getElementById('flow-card');if(!el)return;
+  const f=flowGet();const q=flowQueue();
+  const total=q.missed.length+q.regular.length+q.cb.length;
+  if(total===0){
+    if(todayRouteStops().length>0||f.defer.length>0){
+      el.innerHTML=`<div class="cd flow-cd" style="padding:12px 16px;"><div class="ch" style="margin-bottom:4px;">Route Flow</div><div style="font-size:13px;color:var(--g600);">✅ All stops handled for today.${f.defer.length?' <b>'+f.defer.length+'</b> moved to tomorrow.':''}</div></div>`;
+    }else el.innerHTML='';
+    return;}
+  const c=flowNext();
+  const isMiss=q.missed.length>0&&q.missed[0].id===c.id;
+  const isCb=f.cb.includes(c.id);
+  const tag=isMiss?`<span style="font-size:9px;font-weight:800;color:var(--red);letter-spacing:0.5px;">⏪ CATCH-UP FROM ${(c.sd||'').toUpperCase()}</span><br>`:(isCb?`<span style="font-size:9px;font-weight:800;color:var(--yel);letter-spacing:0.5px;">↩ CIRCLE-BACK</span><br>`:'');
+  const counts=[];
+  if(q.missed.length)counts.push('⏪ '+q.missed.length+' catch-up');
+  if(q.regular.length)counts.push(q.regular.length+' regular');
+  if(q.cb.length)counts.push('↩ '+q.cb.length+' circle-back');
+  if(f.defer.length)counts.push('📅 '+f.defer.length+' → tomorrow');
+  el.innerHTML=`<div class="cd flow-cd" style="padding:12px 16px;">
+    <div class="ch" style="margin-bottom:6px;">Next Stop</div>
+    <div style="font-size:14px;font-weight:600;color:var(--navy);">${tag}${c.ln}, ${c.fn}</div>
+    <div style="font-size:12px;color:var(--g600);margin:2px 0 10px;">${c.ad}${c.ci?', '+c.ci:''} · 🔑 ${c.gc||'N/A'}</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn bp bsm" style="flex:2;" onclick="nextMaps(${c.id})">🗺 Open in Maps</button>
+      <button class="btn bs bsm" style="flex:1;" onclick="openSkip(${c.id})">⏭ Skip</button>
+    </div>
+    <div style="font-size:11px;color:var(--g400);margin-top:8px;">${counts.join(' · ')}</div>
+  </div>`;
+}
+function showFlowBanner(cls,msg,b1,f1,b2,f2){
+  const el=document.getElementById('flow-banner');if(!el)return;
+  window._fb1=f1||null;window._fb2=f2||null;
+  el.className=cls?('show '+cls):'show';
+  el.innerHTML=`<span style="flex:1;min-width:140px;">${msg}</span>${b1?`<button class="fb-btn" onclick="window._fb1&&window._fb1()">${b1}</button>`:''}${b2?`<button class="fb-btn fb-ghost" onclick="window._fb2&&window._fb2()">${b2}</button>`:''}<button class="fb-btn fb-ghost" onclick="hideFlowBanner()">✕</button>`;
+}
+function hideFlowBanner(){const el=document.getElementById('flow-banner');if(el){el.className='';el.innerHTML='';}}
+function startArmed(cid){
+  const f=flowGet();f.armed=null;flowSave(f);hideFlowBanner();
+  nav('vis',document.querySelectorAll('.ni')[2]);
+  setTimeout(function(){const s=document.getElementById('vc');if(s){s.value=String(cid);onVC();}},120);
+}
+function resumeDraftFlow(){
+  hideFlowBanner();
+  nav('vis',document.querySelectorAll('.ni')[2]);
+  setTimeout(function(){if(!document.getElementById('vc').value){try{restoreDraft();}catch(e){}}},150);
+}
+function onWake(){
+  if(window._lastWake&&Date.now()-window._lastWake<2000)return;
+  window._lastWake=Date.now();
+  try{
+    const f=flowGet();flowSave(f); // normalizes day rollover
+    let warned=false;
+    // 1. Loud unsaved-visit warning (30 min threshold, Victor's ruling)
+    try{
+      const r=localStorage.getItem(DK);
+      if(r&&(!window._draftSnooze||Date.now()-window._draftSnooze>15*60000)){
+        const d=JSON.parse(r);
+        if(d&&d.cid&&d.tstartMs&&(Date.now()-d.tstartMs)>30*60000){
+          const c=DB.clients.find(x=>String(x.id)===String(d.cid));
+          const mins=Math.round((Date.now()-d.tstartMs)/60000);
+          showFlowBanner('warn','⚠️ '+(c?c.ln+', '+c.fn:'A visit')+' has been open '+mins+' min and is NOT saved.','💾 Resume',function(){window._draftSnooze=Date.now();resumeDraftFlow();});
+          window._draftSnooze=Date.now();
+          warned=true;
+        }
+      }
+    }catch(e){}
+    // 2. Arrival nudge for the armed stop
+    if(!warned&&f.armed){
+      const c=DB.clients.find(x=>x.id===f.armed);
+      const busy=document.getElementById('vc')&&document.getElementById('vc').value;
+      if(!c||visitedToday(c.id)){f.armed=null;flowSave(f);}
+      else if(!busy){
+        showFlowBanner('','📍 Start visit at '+c.ln+', '+c.fn+'?','▶ Start',function(){startArmed(c.id);},'Not this one',function(){const g=flowGet();g.armed=null;flowSave(g);hideFlowBanner();try{renderFlowCard();}catch(e){}});
+      }
+    }
+    // 3. Morning kickoff, once per day: greet with the first stop (catch-ups lead)
+    if(!warned&&!f.kick){
+      const noneToday=!DB.visits.some(v=>v.dt===localDate());
+      if(noneToday&&flowNext()){f.kick=true;flowSave(f);setTimeout(function(){openNext(true);},500);}
+    }
+    try{renderFlowCard();}catch(e){}
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(onWake,300);});
+window.addEventListener('pageshow',function(){setTimeout(onWake,300);});
+/* ═══════════ END GUIDED ROUTE FLOW ═══════════ */
 function load(){try{const r=localStorage.getItem(SK);if(r){const p=JSON.parse(r);if(p.clients)DB=p;}}catch(e){}migrate();}
 function migrate(){
   // Phase 2 migration: every record needs a stable id + modified-timestamp for merge sync.
@@ -860,18 +1079,20 @@ function nav(id,b){
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 function tog(e){e.classList.toggle('op');e.nextElementSibling.classList.toggle('op');}
 function openM(id){document.getElementById(id).classList.add('act');}
-function closeM(id){document.getElementById(id).classList.remove('act');}
+function closeM(id){document.getElementById(id).classList.remove('act');if(id==='mo-r'&&window._nextAfterRpt){window._nextAfterRpt=false;setTimeout(flowAfterSaveUI,350);}}
 function gv(id){const e=document.getElementById(id);return e?(e.value||'').trim():'';}
 function pf(id){return parseFloat(document.getElementById(id).value);}
 
 /* ═══════════ MAPS ═══════════ */
-let _mapsAddr='';
-function openMaps(addr,city){
+let _mapsAddr='';let _mapsCid=null;
+function openMaps(addr,city,cid){
+  _mapsCid=cid||null;
   _mapsAddr=addr+(city?', '+city:'');
   document.getElementById('maps-addr').textContent=_mapsAddr;
   openM('mo-maps');
 }
 function launchMaps(provider){
+  if(_mapsCid){const _f=flowGet();_f.armed=_mapsCid;flowSave(_f);try{renderFlowCard();}catch(e){}}
   const q=encodeURIComponent(_mapsAddr);
   if(provider==='google'){window.open('https://www.google.com/maps/search/?api=1&query='+q,'_blank');}
   else{window.open('maps://maps.apple.com/?q='+q,'_blank');}
@@ -923,8 +1144,9 @@ function rDash(){
     </div>`;
   }else{us.innerHTML='';}
 
-  const rc=ac.filter(c=>c.sd===dn).sort((a,b)=>(a.ro||999)-(b.ro||999)||a.ln.localeCompare(b.ln));
-  document.getElementById('dr').innerHTML=rc.length===0?`<div class="emp">No stops for ${dn}</div>`:rc.map((c,i)=>{const d=weekVisited(c.id);return`<div class="rs" onclick="viewC(${c.id})"><div class="rn2" style="${d?'background:var(--grn);color:white;':''}">${d?'✓':i+1}</div><div style="flex:1"><div style="font-weight:600;color:var(--navy);font-size:14px;">${c.ln}, ${c.fn}</div><div style="font-size:11px;color:var(--g400);margin-top:2px;"><span onclick="event.stopPropagation();openMaps('${c.ad}','${c.ci||''}');" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}</span> · Gate: ${c.gc||'N/A'}${c.dg?' · 🐕 '+c.dg:''}</div></div></div>`;}).join('');
+  const _fl=flowGet();const rc=ac.filter(c=>c.sd===dn).sort((a,b)=>(a.ro||999)-(b.ro||999)||a.ln.localeCompare(b.ln));
+  document.getElementById('dr').innerHTML=rc.length===0?`<div class="emp">No stops for ${dn}</div>`:rc.map((c,i)=>{const d=weekVisited(c.id);const _cb=!d&&_fl.cb.includes(c.id);const _df=!d&&_fl.defer.includes(c.id);return`<div class="rs" onclick="viewC(${c.id})"><div class="rn2" style="${d?'background:var(--grn);color:white;':_cb?'background:var(--yel);color:white;':_df?'background:var(--g200);color:var(--g600);':''}">${d?'✓':_cb?'↩':_df?'→':i+1}</div><div style="flex:1"><div style="font-weight:600;color:var(--navy);font-size:14px;">${c.ln}, ${c.fn}${_cb?' <span style="font-size:9px;color:var(--yel);font-weight:800;letter-spacing:0.5px;">↩ CIRCLE BACK</span>':''}${_df?' <span style="font-size:9px;color:var(--g400);font-weight:800;letter-spacing:0.5px;">→ TOMORROW</span>':''}</div><div style="font-size:11px;color:var(--g400);margin-top:2px;"><span onclick="event.stopPropagation();openMaps('${c.ad}','${c.ci||''}',${c.id});" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}</span> · Gate: ${c.gc||'N/A'}${c.dg?' · 🐕 '+c.dg:''}</div></div></div>`;}).join('');
+  try{renderFlowCard();}catch(e){}
   const todayVisits=DB.visits.filter(v=>v.dt===td).sort((a,b)=>b.tm?.localeCompare(a.tm||'')||0);
   const rv=todayVisits.length>0?todayVisits:[...DB.visits].sort((a,b)=>b.dt.localeCompare(a.dt)).slice(0,5);
   document.getElementById('dv').innerHTML=rv.length===0?'<div class="emp">No visits yet</div>':rv.map(v=>{const c=DB.clients.find(x=>x.id===v.cid);const n=c?c.ln+', '+c.fn:'?';const l=lc(v.lsi);const idx=DB.visits.indexOf(v);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--g100);cursor:pointer;" onclick="viewVisitDirect(${idx})"><div><div style="font-weight:600;font-size:13px;">${n}</div><div style="font-size:11px;color:var(--g400);">${v.dt}${v.sent?' ✓':''}</div></div>${v.lsi!==null?`<span class="lb ${l}" style="font-size:12px;">LSI ${v.lsi.toFixed(2)}</span>`:''}</div>`;}).join('');
@@ -979,7 +1201,7 @@ function viewC(id){
   vid=id;const c=DB.clients.find(x=>x.id===id);if(!c)return;
   document.getElementById('vn').textContent=c.ln+', '+c.fn;
   const vs=DB.visits.filter(v=>v.cid===id).sort((a,b)=>b.dt.localeCompare(a.dt));const la=vs[0];
-  let h=`<div class="cd" style="font-size:13px;line-height:1.8;"><strong><span onclick="openMaps('${c.ad}','${c.ci}')" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}, ${c.ci}</span></strong><br>📞 ${phoneLinks(c.p1)}${c.p2?'<br>📞 '+phoneLinks(c.p2):''}<br>📧 ${c.em||'N/A'}<br>🗓 ${c.sd} · ${c.fq} · ${c.sty} · $${c.rt||'?'}/mo<br>🔑 Gate: ${c.gc||'N/A'} · Walk: ${c.gs} · Equip: ${c.es}<br>${c.dg?'🐕 '+c.dg+' ('+c.df+')<br>':''}🏊 ${c.pt} · ${c.gal?Number(c.gal).toLocaleString():'?'} gal · ${c.su} · ${c.ws} · ${c.cg==='Yes'?'Caged':'Open'} · ${c.slp==='Salt Pool'?'🧂 Salt':'💧 Chlorine'}</div>`;
+  let h=`<div class="cd" style="font-size:13px;line-height:1.8;"><strong><span onclick="openMaps('${c.ad}','${c.ci}',${c.id})" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}, ${c.ci}</span></strong><br>📞 ${phoneLinks(c.p1)}${c.p2?'<br>📞 '+phoneLinks(c.p2):''}<br>📧 ${c.em||'N/A'}<br>🗓 ${c.sd} · ${c.fq} · ${c.sty} · $${c.rt||'?'}/mo<br>🔑 Gate: ${c.gc||'N/A'} · Walk: ${c.gs} · Equip: ${c.es}<br>${c.dg?'🐕 '+c.dg+' ('+c.df+')<br>':''}🏊 ${c.pt} · ${c.gal?Number(c.gal).toLocaleString():'?'} gal · ${c.su} · ${c.ws} · ${c.cg==='Yes'?'Caged':'Open'} · ${c.slp==='Salt Pool'?'🧂 Salt':'💧 Chlorine'}</div>`;
   if(la){const la_ntc=la.ntc||(la.notes&&!la.act&&!la.eq?la.notes:null);h+=`<div class="cd"><div class="ch">Last Visit — ${la.dt}</div><div style="font-size:12px;line-height:1.8;">FC:${la.fc||'-'} · pH:${la.ph||'-'} · Alk:${la.alk||'-'} · CH:${la.ch||'-'} · CYA:${la.cya||'-'}${la.lsi!==null?`<br><span class="lb ${lc(la.lsi)}" style="font-size:12px;">LSI ${la.lsi.toFixed(2)} — ${ll(la.lsi)}</span>`:''}<br>${vChemStr(la)}${vSvcStr(la)}${la_ntc?'<br>📋 '+la_ntc:''}</div></div>`;}
   if(vs.length>0){h+='<div class="cd"><div class="ch">Visit History</div>'+vs.slice(0,10).map((v,i)=>{const v_ntc=v.ntc||(v.notes&&!v.act&&!v.eq?v.notes:null);return`<div style="padding:10px 0;border-bottom:1px solid var(--g100);cursor:pointer;" onclick="viewVisitByIdx(${id},${i})"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-weight:600;font-size:13px;">${v.dt} ${v.tm||''}</div>${v.lsi!==null?`<span class="lb ${lc(v.lsi)}" style="font-size:10px;padding:2px 6px;">LSI ${v.lsi.toFixed(2)}</span>`:''}</div><div style="font-size:11px;color:var(--g600);margin-top:4px;">FC:${v.fc||'-'} · pH:${v.ph||'-'} · Alk:${v.alk||'-'} · CH:${v.ch||'-'} · CYA:${v.cya||'-'}</div><div style="font-size:11px;color:var(--teal);margin-top:2px;">${vChemStr(v)}</div>${vSvcStr(v)?'<div style="font-size:11px;color:var(--g400);margin-top:2px;">'+vSvcStr(v)+'</div>':''}${v_ntc?'<div style="font-size:11px;color:var(--teal);margin-top:2px;">📋 '+v_ntc+'</div>':''}</div>`;}).join('')+'</div>';}
   document.getElementById('vcon').innerHTML=h;openM('mo-v');
@@ -1608,19 +1830,7 @@ function getVD(){
 }
 function clrV(){document.querySelectorAll('#pg-vis input[type="number"],#pg-vis input[type="text"],#pg-vis textarea').forEach(e=>e.value='');document.querySelectorAll('#pg-vis input[type="checkbox"]').forEach(e=>e.checked=false);chkBicCa();window._visitStart=null;window._visitStartMs=null;document.getElementById('lsi').innerHTML='<span class="lb lg">Enter readings</span>';document.getElementById('dpanel').innerHTML='';photosBefore=[];photosAfter=[];rPh();clearDraft();document.getElementById('vc').selectedIndex=0;onVC();}
 function cancelVisit(){if(document.getElementById('vc').value&&!confirm('Clear this visit form? Unsaved data will be lost.'))return;clrV();document.getElementById('vc').selectedIndex=0;document.getElementById('vqi').innerHTML='';document.getElementById('dpanel').innerHTML='';document.getElementById('vsalt-wrap').style.display='none';document.getElementById('vsalta-wrap').style.display='none';toast('Form cleared');}
-function chkRouteComplete(d){
-  const now=new Date();
-  const dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()];
-  const td=localDate(now);
-  const routeClients=DB.clients.filter(c=>c.st==='Active'&&c.sd===dn);
-  if(routeClients.length===0)return;
-  const allDone=routeClients.every(c=>DB.visits.some(v=>v.cid===c.id&&v.dt===td));
-  if(allDone){
-    setTimeout(()=>{
-      alert('🎉 Route complete! All '+routeClients.length+' stops done for today.'+(syncReady()?'\n\n🔄 Sync carries today\'s visits and photos to your laptop automatically. A 💾 backup now and then is still smart.':'\n\n📲 Don\'t forget:\n1. Tap 💾 to download your backup JSON\n2. Email it to yourself\n3. Load it on your laptop tonight'));
-    },1000);
-  }
-}
+function chkRouteComplete(d){/* v7.3: superseded by flowAfterSaveUI (guided route flow) */}
 function saveV(){
   const d=getVD();
   if(!d.cid){toast('Select a client');return;}
@@ -1632,9 +1842,9 @@ function saveV(){
   if(ok){
     toast('✓ Visit saved!');
     clrV();
-    chkRouteComplete(d);
+    flowAfterSave(d.cid);
     kickSync();
-    setTimeout(()=>{nav('dash',document.querySelector('[onclick*="nav(\'dash\'"]'));},800);
+    setTimeout(()=>{nav('dash',document.querySelector('[onclick*="nav(\'dash\'"]'));setTimeout(flowAfterSaveUI,400);},800);
   }else{DB.visits.pop();}
 }
 function saveVR(){
@@ -1644,7 +1854,7 @@ function saveVR(){
   if(d.nvn){addFollowup(d.cid,d.nvn,null);}
   DB.visits.push(d);
   const ok=save();
-  if(ok){chkRouteComplete(d);kickSync();genRpt(d);clrV();}
+  if(ok){flowAfterSave(d.cid);kickSync();genRpt(d);clrV();window._nextAfterRpt=true;}
   else{DB.visits.pop();}
 }
 
@@ -1812,16 +2022,16 @@ function rRt(){
   const td=localDate();
   if(cs.length===0){document.getElementById('rlist').innerHTML='<div class="emp">No stops for '+d+'</div>';return;}
   document.getElementById('rlist').innerHTML=cs.map((c,i)=>{
-    const dn=weekVisited(c.id);
-    return`<div class="rs" style="${dn?'opacity:0.5;':''}">
+    const dn=weekVisited(c.id);const _fl=flowGet();const _today=d===dayNameOf(new Date());const _cb=_today&&!dn&&_fl.cb.includes(c.id);const _df=_today&&!dn&&_fl.defer.includes(c.id);
+    return`<div class="rs" style="${dn?'opacity:0.5;':_df?'opacity:0.55;':''}">
       <div style="display:flex;flex-direction:column;gap:2px;margin-right:6px;">
         ${i>0?`<button onclick="event.stopPropagation();mvRt(${c.id},-1,'${d}')" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;">▲</button>`:'<div style="height:20px;"></div>'}
-        <div class="rn2" style="${dn?'background:var(--grn);color:white;':''}">${dn?'✓':i+1}</div>
+        <div class="rn2" style="${dn?'background:var(--grn);color:white;':_cb?'background:var(--yel);color:white;':_df?'background:var(--g200);color:var(--g600);':''}">${dn?'✓':_cb?'↩':_df?'→':i+1}</div>
         ${i<cs.length-1?`<button onclick="event.stopPropagation();mvRt(${c.id},1,'${d}')" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;">▼</button>`:'<div style="height:20px;"></div>'}
       </div>
       <div style="flex:1;cursor:pointer;" onclick="viewC(${c.id})">
-        <div style="font-weight:600;color:var(--navy);font-size:14px;">${c.ln}, ${c.fn}</div>
-        <div style="font-size:11px;color:var(--g400);margin-top:2px;line-height:1.5;"><span onclick="event.stopPropagation();openMaps('${c.ad}','${c.ci||''}');" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}</span><br>🔑 ${c.gc||'N/A'} · Walk: ${c.gs} · Equip: ${c.es}${c.dg?'<br>🐕 '+c.dg+' ('+c.df+')':''}${c.no!=='No'?'<br>⚠️ Notify: '+c.no:''}</div>
+        <div style="font-weight:600;color:var(--navy);font-size:14px;">${c.ln}, ${c.fn}${_cb?' <span style="font-size:9px;color:var(--yel);font-weight:800;letter-spacing:0.5px;">↩ CIRCLE BACK</span>':''}${_df?' <span style="font-size:9px;color:var(--g400);font-weight:800;letter-spacing:0.5px;">→ TOMORROW</span>':''}</div>
+        <div style="font-size:11px;color:var(--g400);margin-top:2px;line-height:1.5;"><span onclick="event.stopPropagation();openMaps('${c.ad}','${c.ci||''}',${c.id});" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}</span><br>🔑 ${c.gc||'N/A'} · Walk: ${c.gs} · Equip: ${c.es}${c.dg?'<br>🐕 '+c.dg+' ('+c.df+')':''}${c.no!=='No'?'<br>⚠️ Notify: '+c.no:''}</div>
       </div>
       ${!dn?`<button onclick="event.stopPropagation();quickLog(${c.id})" style="border:none;background:var(--teal);color:white;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">Log Visit</button>`:''}</div>`;
   }).join('');
@@ -1927,7 +2137,7 @@ function showVisitDetail(v){
 
   let h=`<div class="cd"><div style="font-weight:600;color:var(--navy);font-size:15px;margin-bottom:8px;">${nm}</div>
     <div style="font-size:12px;color:var(--g400);">${v.dt}${v.tstart||v.tm?` · ${v.tstart?v.tstart+' → ':' '}${v.tm||''}${v.tstart&&v.tm?' ('+calcDur(v.tstart,v.tm)+')':''}`:''}</div>
-    ${c?`<div style="font-size:12px;"><span onclick="openMaps('${c.ad}','${c.ci||''}');" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}</span></div>`:''}
+    ${c?`<div style="font-size:12px;"><span onclick="openMaps('${c.ad}','${c.ci||''}',${c.id});" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}</span></div>`:''}
   </div>`;
 
   // Readings
@@ -2483,7 +2693,7 @@ async function generatePDF(v,c){
     doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...grayDk);
     doc.text(b.label,margin+1,y);
     if(trends&&trends[r.k]!==undefined)drawArrow(margin+31,y,trends[r.k]);
-    const valTxt=(r.a!==null?fmt(r.t,r.dec)+' \u2192 '+fmt(r.a,r.dec):fmt(r.t,r.dec))+(b.unit?' '+b.unit:'');
+    const valTxt=(r.a!==null?fmt(r.t,r.dec)+' to '+fmt(r.a,r.dec):fmt(r.t,r.dec))+(b.unit?' '+b.unit:'');
     doc.setFontSize(8.5);
     doc.text(valTxt,margin+37,y);
     // Bar: track, ideal band, connector, dots
@@ -2643,6 +2853,16 @@ async function generatePDF(v,c){
 }
 
 /* ═══════════ SHARE REPORT WITH PHOTOS (PDF) ═══════════ */
+async function downloadPDF(){
+  if(!lastRpt)return;
+  const c=DB.clients.find(x=>x.id===lastRpt.cid);if(!c)return;
+  toast('Generating PDF...');
+  try{
+    const doc=await generatePDF(lastRpt,c);
+    doc.save('Ripple_Report_'+c.ln+'_'+lastRpt.dt+'.pdf');
+    toast('✓ PDF downloaded');
+  }catch(e){toast('PDF error: '+(e.message||e));}
+}
 async function shareReport(){
   if(!lastRpt)return;
   const c=DB.clients.find(x=>x.id===lastRpt.cid);if(!c)return;
