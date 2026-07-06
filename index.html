@@ -251,6 +251,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 </div>
 <div class="cd"><div class="st" onclick="tog(this)">Service <span class="ar">▶</span></div><div class="sc">
 <div class="fr"><div class="fg"><label class="fl">Service Day</label><select class="fs" id="cdy"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select></div><div class="fg"><label class="fl">Frequency</label><select class="fs" id="cfq"><option>Weekly</option><option>Biweekly</option><option>Monthly</option></select></div></div>
+<div class="fr"><div class="fg"><label class="fl">Status</label><select class="fs" id="cstt"><option>Active</option><option>Inactive</option></select></div><div class="fg"></div></div>
 <div class="fr"><div class="fg"><label class="fl">Type</label><select class="fs" id="cst"><option>Full Service</option><option>Chemical Only</option><option>Filter Clean Only</option><option>Custom</option></select></div><div class="fg"><label class="fl">Rate ($/mo)</label><input type="number" class="fi" id="crt" step="5"></div></div>
 <div class="fr"><div class="fg"><label class="fl">Notify Before?</label><select class="fs" id="cno"><option>No</option><option>Yes - Call</option><option>Yes - Text</option></select></div><div class="fg"><label class="fl">Client Since</label><input type="date" class="fi" id="csn"></div></div>
 <div class="fg"><label class="fl">Personality</label><textarea class="ft" id="cpe"></textarea></div>
@@ -396,7 +397,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.4';
+const APP_VER='v7.4.1';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -1308,7 +1309,7 @@ function rCli(){
     }else{bf.style.display='none';bf.value='';}
   }
   const f=DB.clients.filter(c=>(c.ln+' '+c.fn+' '+c.ad).toLowerCase().includes(s)&&(!bv||bookOf(c)===bv)).sort((a,b)=>a.ln.localeCompare(b.ln));
-  document.getElementById('clist').innerHTML=f.length===0?'<div class="emp">No clients. Tap + Add.</div>':f.map(c=>`<div class="ci" onclick="viewC(${c.id})"><div><div style="font-weight:600;font-size:14px;color:var(--navy);">${c.ln}, ${c.fn}</div><div style="font-size:11px;color:var(--g400);margin-top:2px;">${c.ad} · ${c.sd}${c.gal?' · '+Number(c.gal).toLocaleString()+' gal':''}${bookOf(c)!=='Ripple'?' · \ud83d\udcd2 '+bookOf(c):''}</div></div><span style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;background:var(--grn-lt);color:var(--grn);">${c.st}</span></div>`).join('');
+  document.getElementById('clist').innerHTML=f.length===0?'<div class="emp">No clients. Tap + Add.</div>':f.map(c=>`<div class="ci" onclick="viewC(${c.id})"><div><div style="font-weight:600;font-size:14px;color:var(--navy);">${c.ln}, ${c.fn}</div><div style="font-size:11px;color:var(--g400);margin-top:2px;">${c.ad} · ${c.sd}${c.gal?' · '+Number(c.gal).toLocaleString()+' gal':''}${bookOf(c)!=='Ripple'?' · \ud83d\udcd2 '+bookOf(c):''}</div></div><span style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;background:${c.st==='Active'?'var(--grn-lt)':'var(--g100)'};color:${c.st==='Active'?'var(--grn)':'var(--g400)'};">${c.st}</span></div>`).join('');
 }
 
 function openAdd(){eid=null;document.getElementById('mct').textContent='Add Client';document.getElementById('bdc').style.display='none';clrCF();openM('mo-c');document.querySelector('#mo-c .ml').scrollTop=0;rNVNModal();}
@@ -1316,14 +1317,14 @@ function clrCF(){document.querySelectorAll('#mo-c input,#mo-c textarea').forEach
 function togSalt(){const isSalt=document.getElementById('cslp').value==='Salt Pool';document.getElementById('salt-target-wrap').style.display=isSalt?'':'none';}
 
 function getCF(){
-  const d={ln:gv('cln'),fn:gv('cfn'),ad:gv('cad'),ci:gv('cci'),p1:gv('cp1'),p2:gv('cp2'),em:gv('cem'),pc:gv('cpc'),rf:gv('crf'),sd:gv('cdy'),fq:gv('cfq'),sty:gv('cst'),rt:gv('crt'),no:gv('cno'),sn:gv('csn'),pe:gv('cpe'),pt:gv('cpt'),gal:gv('cgal'),slp:gv('cslp'),sltgt:gv('cslt'),su:gv('csu'),cg:gv('ccg'),sp:gv('csp'),ws:gv('cws'),sk:gv('csk'),re:gv('cre'),md:gv('cmd'),wf:gv('cwf'),sn2:gv('csn2'),gc:gv('cgt'),gs:gv('cgs'),es:gv('ces'),dg:gv('cdg'),df:gv('cdf'),op:gv('cop'),cn:gv('ccn'),gn:gv('cgn'),bk:(function(){const b=gv('cbk');return(!b||b==='__new')?'Ripple':b;})(),emOn:gv('cemn'),st:'Active'};
+  const d={ln:gv('cln'),fn:gv('cfn'),ad:gv('cad'),ci:gv('cci'),p1:gv('cp1'),p2:gv('cp2'),em:gv('cem'),pc:gv('cpc'),rf:gv('crf'),sd:gv('cdy'),fq:gv('cfq'),sty:gv('cst'),rt:gv('crt'),no:gv('cno'),sn:gv('csn'),pe:gv('cpe'),pt:gv('cpt'),gal:gv('cgal'),slp:gv('cslp'),sltgt:gv('cslt'),su:gv('csu'),cg:gv('ccg'),sp:gv('csp'),ws:gv('cws'),sk:gv('csk'),re:gv('cre'),md:gv('cmd'),wf:gv('cwf'),sn2:gv('csn2'),gc:gv('cgt'),gs:gv('cgs'),es:gv('ces'),dg:gv('cdg'),df:gv('cdf'),op:gv('cop'),cn:gv('ccn'),gn:gv('cgn'),bk:(function(){const b=gv('cbk');return(!b||b==='__new')?'Ripple':b;})(),emOn:gv('cemn'),st:gv('cstt')||'Active'};
   EK.forEach(k=>{d[k+'M']=gv('e'+k+'m');d[k+'D']=gv('e'+k+'d');d[k+'Y']=gv('e'+k+'y');d[k+'S']=gv('e'+k+'s');});
   return d;
 }
 
 function fillCF(c){
   popBooks(bookOf(c));
-  const m={'cln':c.ln,'cfn':c.fn,'cad':c.ad,'cci':c.ci||'Port St. Lucie','cp1':c.p1,'cp2':c.p2,'cem':c.em,'cpc':c.pc,'crf':c.rf,'cdy':c.sd,'cfq':c.fq,'cst':c.sty,'crt':c.rt,'cno':c.no,'csn':c.sn,'cpe':c.pe,'cpt':c.pt,'cgal':c.gal,'cslp':c.slp||'Regular Chlorine','cslt':c.sltgt||'3200','csu':c.su,'ccg':c.cg,'csp':c.sp,'cws':c.ws,'csk':c.sk||'1','cre':c.re||'2','cmd':c.md,'cwf':c.wf,'csn2':c.sn2,'cgt':c.gc,'cgs':c.gs,'ces':c.es,'cdg':c.dg,'cdf':c.df,'cop':c.op,'ccn':c.cn,'cgn':c.gn,'cemn':c.emOn||''};
+  const m={'cln':c.ln,'cfn':c.fn,'cad':c.ad,'cci':c.ci||'Port St. Lucie','cp1':c.p1,'cp2':c.p2,'cem':c.em,'cpc':c.pc,'crf':c.rf,'cdy':c.sd,'cfq':c.fq,'cst':c.sty,'crt':c.rt,'cno':c.no,'csn':c.sn,'cpe':c.pe,'cpt':c.pt,'cgal':c.gal,'cslp':c.slp||'Regular Chlorine','cslt':c.sltgt||'3200','csu':c.su,'ccg':c.cg,'csp':c.sp,'cws':c.ws,'csk':c.sk||'1','cre':c.re||'2','cmd':c.md,'cwf':c.wf,'csn2':c.sn2,'cgt':c.gc,'cgs':c.gs,'ces':c.es,'cdg':c.dg,'cdf':c.df,'cop':c.op,'ccn':c.cn,'cgn':c.gn,'cemn':c.emOn||'','cstt':c.st||'Active'};
   EK.forEach(k=>{m['e'+k+'m']=c[k+'M']||'';m['e'+k+'d']=c[k+'D']||'';m['e'+k+'y']=c[k+'Y']||'';m['e'+k+'s']=c[k+'S']||'';});
   Object.entries(m).forEach(([id,val])=>{const e=document.getElementById(id);if(e)e.value=val||'';});
   togSalt();
