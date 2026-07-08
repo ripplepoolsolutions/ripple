@@ -154,7 +154,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <!-- LOG VISIT -->
 <div class="pg" id="pg-vis">
 <div id="visit-header" style="display:none;position:sticky;top:0;z-index:50;background:var(--navy);color:white;border-radius:10px;padding:10px 14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.25);align-items:center;justify-content:space-between;">
-  <div style="min-width:0;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.7;">Visit in progress</div><div id="visit-header-name" style="font-size:15px;font-weight:700;font-family:'Playfair Display',serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div></div>
+  <div style="min-width:0;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.7;">Visit in progress</div><div id="visit-header-name" style="font-size:15px;font-weight:700;font-family:'Playfair Display',serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+    <div style="display:flex;align-items:flex-end;gap:12px;margin-top:6px;">
+      <label style="display:flex;flex-direction:column;font-size:8px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.7;">Arrived<input type="time" id="arr-time" onchange="setArrTime(this.value)" style="margin-top:2px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);color:white;color-scheme:dark;border-radius:6px;padding:3px 6px;font-size:12px;font-family:'DM Sans',sans-serif;"></label>
+      <label style="display:flex;flex-direction:column;font-size:8px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.7;">Left<input type="time" id="lft-time" onchange="setLftTime(this.value)" style="margin-top:2px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);color:white;color-scheme:dark;border-radius:6px;padding:3px 6px;font-size:12px;font-family:'DM Sans',sans-serif;"></label>
+      <span id="dur-hint" style="font-size:10px;opacity:0.7;padding-bottom:3px;"></span>
+    </div></div>
   <button onclick="openEndVisit()" style="flex-shrink:0;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.35);color:white;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">✕ End</button>
 </div>
 <h2 style="font-family:'Playfair Display',serif;color:var(--navy);font-size:20px;margin-bottom:12px;">Log Visit</h2>
@@ -171,7 +176,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div id="last-ntc-banner"></div>
 <div id="lastvisit-panel"></div>
 <div class="cd">
-<div class="st op" onclick="tog(this)">Chemical Readings <span class="ar">▶</span></div>
+<div class="st op" onclick="togReadings(this)">Chemical Readings <span class="ar">▶</span></div>
 <div class="sc op">
 <div class="fr"><div class="fg"><label class="fl">Water Temp °F</label><input type="number" class="fi" id="vtemp" placeholder="76-82" oninput="doCalc()"></div><div class="fg"><label class="fl">Free Chlorine (2-5 ppm)</label><input type="number" class="fi" id="vfc" step="0.5" placeholder="2-5" oninput="doCalc()"><div id="vfc-info" style="display:none;font-size:11px;color:var(--teal);margin-top:4px;"></div></div></div>
 <div class="fr"><div class="fg"><label class="fl">pH (7.2-7.6)</label><input type="number" class="fi" id="vph" step="0.1" placeholder="7.2-7.6" oninput="doCalc()"></div><div class="fg"><label class="fl">Total Alkalinity (80-120 ppm)</label><input type="number" class="fi" id="valk" step="10" placeholder="80-120" oninput="doCalc()"></div></div>
@@ -224,6 +229,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div id="float-cam" style="display:none;position:fixed;right:14px;bottom:84px;z-index:60;">
   <button onclick="floatCamShot()" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--teal);color:white;font-size:24px;box-shadow:0 4px 12px rgba(0,0,0,0.35);cursor:pointer;">📷</button>
   <div id="float-cam-mode" onclick="floatCamFlip()" style="text-align:center;margin-top:4px;background:var(--navy);color:white;font-size:10px;font-weight:700;border-radius:8px;padding:3px 0;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Before</div>
+</div>
+<div id="photo-takeover" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,var(--navy),var(--navy-lt));flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;">
+  <div id="pt-title" style="font-family:'Playfair Display',serif;color:white;font-size:26px;margin-bottom:10px;"></div>
+  <div id="pt-sub" style="color:rgba(255,255,255,0.75);font-size:14px;margin-bottom:38px;max-width:290px;line-height:1.5;"></div>
+  <button onclick="takeoverShoot()" style="width:124px;height:124px;border-radius:50%;border:none;background:var(--teal);color:white;font-size:54px;box-shadow:0 8px 26px rgba(0,0,0,0.45);cursor:pointer;">📷</button>
+  <button onclick="takeoverSkip()" style="margin-top:34px;background:none;border:none;color:rgba(255,255,255,0.55);font-size:14px;text-decoration:underline;cursor:pointer;font-family:'DM Sans',sans-serif;">Skip for now</button>
 </div>
 </div>
 
@@ -377,8 +388,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
   <div class="mh"><span>Open Address In...</span><button class="mx" onclick="closeM('mo-maps')">&times;</button></div>
   <div style="font-size:14px;color:var(--g600);margin-bottom:20px;text-align:center;" id="maps-addr"></div>
   <div style="display:flex;flex-direction:column;gap:10px;">
-    <button class="btn bp" onclick="launchMaps('google')">🗺 Google Maps</button>
-    <button class="btn bs" onclick="launchMaps('apple')">🍎 Apple Maps</button>
+    <button class="btn bp" onclick="launchMaps('apple')">🍎 Apple Maps</button>
+    <button class="btn bs" onclick="launchMaps('google')">🗺 Google Maps</button>
   </div>
 </div></div>
 
@@ -397,7 +408,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.4.1';
+const APP_VER='v7.4.2';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -1064,7 +1075,7 @@ function endVisitDiscard(){
 function clrVUI(){
   document.querySelectorAll('#pg-vis input[type="number"],#pg-vis input[type="text"],#pg-vis textarea').forEach(e=>e.value='');
   document.querySelectorAll('#pg-vis input[type="checkbox"]').forEach(e=>e.checked=false);
-  chkBicCa();window._visitStart=null;window._visitStartMs=null;
+  chkBicCa();window._visitStart=null;window._visitStartMs=null;window._visitEnd=null;window._visitEndMs=null;window._beforePrompted=null;window._afterPrompted=null;
   document.getElementById('lsi').innerHTML='<span class="lb lg">Enter readings</span>';
   document.getElementById('dpanel').innerHTML='';
   photosBefore=[];photosAfter=[];rPh();
@@ -1079,7 +1090,7 @@ function updVisitHeader(){
   if(c&&onVis){
     h.style.display='flex';
     document.getElementById('visit-header-name').textContent=c.fn+' '+c.ln;
-    cam.style.display='block';updFloatCam();
+    cam.style.display='block';updFloatCam();updTimeChips();
   }else{h.style.display='none';cam.style.display='none';}
 }
 
@@ -1103,6 +1114,79 @@ function floatCamFlip(){
 function floatCamShot(){
   const m=_camMode||camAutoMode();
   document.getElementById(m==='b'?'pinp-b':'pinp-a').click();
+}
+
+/* ═══════════ PHOTO TAKEOVER + EDITABLE TIMES (v7.4.2) ═══════════ */
+let _takeoverMode=null;
+function showPhotoTakeover(mode){
+  _takeoverMode=mode;
+  const isB=mode==='b';
+  document.getElementById('pt-title').textContent=isB?'Before photos':'After photos';
+  document.getElementById('pt-sub').textContent=isB?'Grab a couple of before shots so the report tells the full story.':'Now capture the after shots before you head to the next stop.';
+  document.getElementById('photo-takeover').style.display='flex';
+}
+function takeoverShoot(){
+  const m=_takeoverMode;
+  document.getElementById('photo-takeover').style.display='none';
+  document.getElementById(m==='b'?'pinp-b':'pinp-a').click();
+}
+function takeoverSkip(){document.getElementById('photo-takeover').style.display='none';}
+function maybeBeforePrompt(){
+  if(window._restoringDraft)return;
+  if(!document.getElementById('pg-vis').classList.contains('act'))return;
+  const cid=parseInt(document.getElementById('vc').value);
+  if(!cid)return;
+  if(photosBefore.length>0)return;
+  if(window._beforePrompted===cid)return;
+  window._beforePrompted=cid;
+  showPhotoTakeover('b');
+}
+function maybeAfterPrompt(){
+  if(!document.getElementById('pg-vis').classList.contains('act'))return;
+  const cid=parseInt(document.getElementById('vc').value);
+  if(!cid)return;
+  if(photosAfter.length>0)return;
+  if(window._afterPrompted===cid)return;
+  const hasReading=['vfc','vph','valk'].some(f=>{const e=document.getElementById(f);return e&&e.value;});
+  if(!hasReading)return;
+  window._afterPrompted=cid;
+  showPhotoTakeover('a');
+}
+function togReadings(e){
+  const wasOpen=e.classList.contains('op');
+  tog(e);
+  if(wasOpen&&!e.classList.contains('op'))maybeAfterPrompt();
+}
+function fmtTimeInput(ms){if(!ms)return '';const d=new Date(ms);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function updTimeChips(){
+  const ai=document.getElementById('arr-time'),li=document.getElementById('lft-time'),dh=document.getElementById('dur-hint');
+  if(ai)ai.value=fmtTimeInput(window._visitStartMs);
+  if(li)li.value=fmtTimeInput(window._visitEndMs);
+  if(dh){
+    if(window._visitStartMs){
+      const end=window._visitEndMs||Date.now();
+      const mins=Math.max(0,Math.round((end-window._visitStartMs)/60000));
+      dh.textContent=mins+' min'+(window._visitEndMs?'':' so far');
+    }else dh.textContent='';
+  }
+}
+function setArrTime(v){
+  if(!v)return;
+  const p=v.split(':');
+  const base=window._visitStartMs?new Date(window._visitStartMs):new Date();
+  base.setHours(parseInt(p[0]),parseInt(p[1]),0,0);
+  window._visitStartMs=base.getTime();
+  window._visitStart=base.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  saveDraft();updTimeChips();
+}
+function setLftTime(v){
+  if(!v){window._visitEndMs=null;window._visitEnd=null;saveDraft();updTimeChips();return;}
+  const p=v.split(':');
+  const base=window._visitStartMs?new Date(window._visitStartMs):new Date();
+  base.setHours(parseInt(p[0]),parseInt(p[1]),0,0);
+  window._visitEndMs=base.getTime();
+  window._visitEnd=base.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  saveDraft();updTimeChips();
 }
 
 /* ═══════════ PHONE LINKS ═══════════ */
@@ -1136,6 +1220,7 @@ function saveDraft(){
       vsvo:gv('vsvo'),vntc:gv('vntc'),vnvn:gv('vnvn'),vofn:gv('vofn'),
       ph2b:[...photosBefore],ph2a:[...photosAfter],
       tstart:window._visitStart||null,tstartMs:window._visitStartMs||null,
+      tend:window._visitEnd||null,tendMs:window._visitEndMs||null,
       ts:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})
     };
     if(!d.cid)return;
@@ -1162,6 +1247,7 @@ function restoreDraft(){
   try{
     const r=localStorage.getItem(DK);
     if(!r)return;
+    window._restoringDraft=true;
     const d=JSON.parse(r);
     document.getElementById('vc').value=d.cid||'';
     if(d.cid)onVC();
@@ -1171,10 +1257,12 @@ function restoreDraft(){
     ['vbr','vtb','vva','vskm','vbw','vsk','vpb','vpi','vltg'].forEach(f=>{const e=document.getElementById(f);if(e)e.checked=!!d[f];});
     photosBefore=d.ph2b||[];photosAfter=d.ph2a||[];rPh();
     if(d.tstartMs){window._visitStart=d.tstart;window._visitStartMs=d.tstartMs;}
-    doCalc();chkBicCa();
+    if(d.tendMs){window._visitEnd=d.tend;window._visitEndMs=d.tendMs;}else{window._visitEnd=null;window._visitEndMs=null;}
+    doCalc();chkBicCa();updTimeChips();
     document.getElementById('draft-banner').style.display='none';
+    window._restoringDraft=false;
     toast('✓ Draft restored!');
-  }catch(e){toast('Could not restore draft');}
+  }catch(e){window._restoringDraft=false;toast('Could not restore draft');}
 }
 function discardDraft(){
   clearDraft();
@@ -1403,6 +1491,7 @@ function onVC(){
   // Record visit start time when client is selected
   window._visitStart=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   window._visitStartMs=Date.now();
+  window._visitEnd=null;window._visitEndMs=null;
   // ── Last visit context panel + measured decay setup ──
   window._lastDep=null;window._mdec=null;
   const lvEl=document.getElementById('lastvisit-panel');
@@ -1432,6 +1521,7 @@ function onVC(){
   }
   doCalc();
   updVisitHeader();
+  maybeBeforePrompt();
 }
 
 // Measured chlorine decay: last departure FC vs current arrival FC over elapsed days
@@ -1972,15 +2062,16 @@ function rPh(){
 /* ═══════════ SAVE VISIT ═══════════ */
 function getVD(){
   const lsi=calcLSI();
-  const tend=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  const durMin=window._visitStartMs?Math.round((Date.now()-window._visitStartMs)/60000):null;
+  const _endMs=window._visitEndMs||Date.now();
+  const tend=window._visitEnd||new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  const durMin=window._visitStartMs?Math.max(0,Math.round((_endMs-window._visitStartMs)/60000)):null;
   return{vid:'v'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),mt:Date.now(),cid:parseInt(document.getElementById('vc').value),dt:localDate(),tm:tend,tstart:window._visitStart||null,tend,dur:durMin,
     temp:gv('vtemp'),fc:gv('vfc'),ph:gv('vph'),alk:gv('valk'),ch:gv('vch'),cya:gv('vcya'),salt:gv('vsalt'),phos:gv('vphos'),tds:gv('vtds'),lsi:lsi,
     cla:gv('vcla'),acid:gv('vacid'),bic:gv('vbic'),cyaa:gv('vcyaa'),salta:gv('vsalta'),cacl:gv('vcacl'),pr:gv('vpr'),oth:gv('vother'),
     br:document.getElementById('vbr').checked,tb:document.getElementById('vtb').checked,va:document.getElementById('vva').checked,skm:document.getElementById('vskm').checked,bw:document.getElementById('vbw').checked,sk:document.getElementById('vsk').checked,pb:document.getElementById('vpb').checked,pi:document.getElementById('vpi').checked,
     svo:gv('vsvo'),ltg:document.getElementById('vltg').checked,mdec:window._mdec||null,ntc:gv('vntc'),nvn:gv('vnvn'),ofn:gv('vofn'),ofnDone:false,ph2b:[...photosBefore],ph2a:[...photosAfter],sent:false};
 }
-function clrV(){document.querySelectorAll('#pg-vis input[type="number"],#pg-vis input[type="text"],#pg-vis textarea').forEach(e=>e.value='');document.querySelectorAll('#pg-vis input[type="checkbox"]').forEach(e=>e.checked=false);chkBicCa();window._visitStart=null;window._visitStartMs=null;document.getElementById('lsi').innerHTML='<span class="lb lg">Enter readings</span>';document.getElementById('dpanel').innerHTML='';photosBefore=[];photosAfter=[];rPh();clearDraft();document.getElementById('vc').selectedIndex=0;onVC();}
+function clrV(){document.querySelectorAll('#pg-vis input[type="number"],#pg-vis input[type="text"],#pg-vis textarea').forEach(e=>e.value='');document.querySelectorAll('#pg-vis input[type="checkbox"]').forEach(e=>e.checked=false);chkBicCa();window._visitStart=null;window._visitStartMs=null;window._visitEnd=null;window._visitEndMs=null;window._beforePrompted=null;window._afterPrompted=null;document.getElementById('lsi').innerHTML='<span class="lb lg">Enter readings</span>';document.getElementById('dpanel').innerHTML='';photosBefore=[];photosAfter=[];rPh();clearDraft();document.getElementById('vc').selectedIndex=0;onVC();}
 function cancelVisit(){if(document.getElementById('vc').value&&!confirm('Clear this visit form? Unsaved data will be lost.'))return;clrV();document.getElementById('vc').selectedIndex=0;document.getElementById('vqi').innerHTML='';document.getElementById('dpanel').innerHTML='';document.getElementById('vsalt-wrap').style.display='none';document.getElementById('vsalta-wrap').style.display='none';toast('Form cleared');}
 function chkRouteComplete(d){/* v7.3: superseded by flowAfterSaveUI (guided route flow) */}
 function saveV(){
