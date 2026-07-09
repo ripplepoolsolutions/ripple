@@ -408,7 +408,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.4.3';
+const APP_VER='v7.4.4';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -502,6 +502,7 @@ function flowAfterSave(cid){const f=flowGet();cid=parseInt(cid);
   flowSave(f);}
 /*FLOW-PURE-END*/
 function nextMaps(cid){const c=DB.clients.find(x=>x.id===cid);if(!c)return;closeM('mo-next');openMaps(c.ad,c.ci||'',cid);}
+function nextLog(cid){const c=DB.clients.find(x=>x.id===cid);if(!c)return;closeM('mo-next');startArmed(cid);} // v7.4.4: log the next stop directly, no maps detour
 function openNext(auto){
   const q=flowQueue();const c=flowNext();
   const body=document.getElementById('mo-next-body');const title=document.getElementById('mo-next-title');
@@ -518,6 +519,7 @@ function openNext(auto){
     <div style="font-size:13px;color:var(--g600);margin:4px 0 14px;line-height:1.5;">${c.ad}${c.ci?', '+c.ci:''}<br>🔑 Gate: ${c.gc||'N/A'} · Walk: ${c.gs||'?'}${c.dg?' · 🐕 '+c.dg+' ('+(c.df||'?')+')':''}</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
       <button class="btn bp" onclick="nextMaps(${c.id})">🗺 Open in Maps</button>
+      <button class="btn bs" onclick="nextLog(${c.id})">▶ Log Visit Now</button>
       <button class="btn bs" onclick="openSkip(${c.id})">⏭ Skip this stop</button>
       <button class="btn bs" onclick="closeM('mo-next')">Close</button>
       ${isMiss?'<button onclick="clearCatchups()" style="border:none;background:none;color:var(--g400);font-size:11px;text-decoration:underline;cursor:pointer;padding:4px 0;font-family:\'DM Sans\',sans-serif;">\ud83e\uddf9 Clear all catch-ups, start fresh</button>':''}
@@ -679,6 +681,7 @@ function renderFlowCard(){
       <button class="btn bp bsm" style="flex:2;" onclick="nextMaps(${c.id})">🗺 Open in Maps</button>
       <button class="btn bs bsm" style="flex:1;" onclick="openSkip(${c.id})">⏭ Skip</button>
     </div>
+    <button class="btn bs bsm" style="width:100%;margin-top:6px;" onclick="nextLog(${c.id})">▶ Log Visit Now</button>
     <div style="font-size:11px;color:var(--g400);margin-top:8px;">${counts.join(' · ')}</div>
     ${q.missed.length?'<div style="margin-top:6px;"><button onclick="clearCatchups()" style="border:none;background:none;color:var(--g400);font-size:11px;text-decoration:underline;cursor:pointer;padding:0;font-family:\'DM Sans\',sans-serif;">\ud83e\uddf9 Clear all catch-ups, start fresh</button></div>':''}
   </div>`;
