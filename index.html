@@ -408,7 +408,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.4.2';
+const APP_VER='v7.4.3';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -1075,7 +1075,7 @@ function endVisitDiscard(){
 function clrVUI(){
   document.querySelectorAll('#pg-vis input[type="number"],#pg-vis input[type="text"],#pg-vis textarea').forEach(e=>e.value='');
   document.querySelectorAll('#pg-vis input[type="checkbox"]').forEach(e=>e.checked=false);
-  chkBicCa();window._visitStart=null;window._visitStartMs=null;window._visitEnd=null;window._visitEndMs=null;window._beforePrompted=null;window._afterPrompted=null;
+  chkBicCa();window._visitStart=null;window._visitStartMs=null;window._visitEnd=null;window._visitEndMs=null;window._beforePrompted=null;window._afterPrompted=null;window._lsiCarried=null;
   document.getElementById('lsi').innerHTML='<span class="lb lg">Enter readings</span>';
   document.getElementById('dpanel').innerHTML='';
   photosBefore=[];photosAfter=[];rPh();
@@ -1740,11 +1740,52 @@ function updDosePH(r){
 }
 function doCalc(){calcLSI();calcDose();updMeasuredDecay();updFloatCam();}
 
+// ── v7.4.3: LSI CARRY-FORWARD LAYER ──
+// Fresh readings always win. Blank temp/alk/CH/CYA fill from the most recent REAL visit
+// (skips excluded), preferring departure-stamped values (post-treatment truth) over arrival
+// readings. pH is NEVER carried: it is the largest and fastest-moving term in the index.
+// Carried values feed the LSI display and the visit record (lsix flag) ONLY. They never
+// reach calcDose, and no carried/approx marker ever renders on any client-facing surface.
+function lsiFmtDate(s){const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const p=(s||'').split('-');return p.length===3?M[+p[1]-1]+' '+(+p[2]):s;}
+function carriedVals(cid){
+  const out={};
+  if(isNaN(cid))return out;
+  const vs=DB.visits.filter(v=>v.cid===cid&&!v.skip).sort((a,b)=>((b.dt||'').localeCompare(a.dt||''))||((b.mt||0)-(a.mt||0)));
+  const grab=fields=>{for(const v of vs){for(const f of fields){const x=parseFloat(v[f]);if(!isNaN(x)&&x>0)return{v:x,dt:v.dt};}}return null;};
+  const c1=grab(['dch','ch']);if(c1)out.ch=c1;
+  const a1=grab(['dalk','alk']);if(a1)out.alk=a1;
+  const t1=grab(['temp']);if(t1)out.temp=t1;
+  const y1=grab(['dcya','cya']);if(y1)out.cya=y1;
+  return out;
+}
 function calcLSI(){
-  const t=pf('vtemp'),ph=pf('vph'),a=pf('valk'),ch=pf('vch'),cy=pf('vcya'),tds=pf('vtds');
-  if(isNaN(t)||isNaN(ph)||isNaN(a)||isNaN(ch)){document.getElementById('lsi').innerHTML='<span class="lb lg">Enter readings</span>';return null;}
+  const ph=pf('vph'),tds=pf('vtds');
+  let t=pf('vtemp'),a=pf('valk'),ch=pf('vch'),cy=pf('vcya');
+  const chFresh=!isNaN(ch);
+  const el=document.getElementById('lsi');
+  const cid=parseInt(document.getElementById('vc').value);
+  window._lsiCarried=null;
+  const cv=carriedVals(cid);
+  const used=[];
+  if(isNaN(t)&&cv.temp){t=cv.temp.v;used.push({f:'temp',n:'Temp',v:cv.temp.v,dt:cv.temp.dt});}
+  if(isNaN(a)&&cv.alk){a=cv.alk.v;used.push({f:'alk',n:'Alk',v:cv.alk.v,dt:cv.alk.dt});}
+  if(isNaN(ch)&&cv.ch){ch=cv.ch.v;used.push({f:'ch',n:'CH',v:cv.ch.v,dt:cv.ch.dt});}
+  if(isNaN(cy)&&cv.cya){cy=cv.cya.v;used.push({f:'cya',n:'CYA',v:cv.cya.v,dt:cv.cya.dt});}
+  // Internal nudges: visit screen only, never client-facing
+  let nudge='';
+  if(!isNaN(cid)&&!chFresh){
+    if(!cv.ch){nudge='<div style="font-size:11px;color:#b45309;background:rgba(243,174,78,0.12);border:1px solid rgba(243,174,78,0.45);border-radius:8px;padding:6px 10px;margin-top:6px;">🧪 No calcium hardness on record for this pool. Test CH to enable the water balance index.</div>';}
+    else{const ageD=Math.round((new Date(localDate())-new Date(cv.ch.dt))/86400000);if(ageD>40){nudge='<div style="font-size:11px;color:#b45309;background:rgba(243,174,78,0.12);border:1px solid rgba(243,174,78,0.45);border-radius:8px;padding:6px 10px;margin-top:6px;">🧪 CH reading is '+Math.round(ageD/7)+' weeks old, worth retesting.</div>';}}
+  }
+  if(isNaN(t)||isNaN(ph)||isNaN(a)||isNaN(ch)){el.innerHTML='<span class="lb lg">Enter readings</span>'+nudge;return null;}
   const L=doLSI(t,ph,a,ch,cy,tds);
-  document.getElementById('lsi').innerHTML=`<span class="lb ${lc(L)}">LSI ${L.toFixed(2)} — ${ll(L)}</span>`;
+  if(used.length){
+    window._lsiCarried=used.map(u=>u.f).join(',');
+    const src=used.map(u=>u.n+' '+u.v+' ('+lsiFmtDate(u.dt)+')').join(' · ');
+    el.innerHTML=`<span class="lb ${lc(L)}">LSI ${L.toFixed(2)} — ${ll(L)} <span style="font-weight:400;font-size:10px;">(approx)</span></span><div style="font-size:10px;color:var(--g400);margin-top:4px;">Using ${src}</div>`+nudge;
+  }else{
+    el.innerHTML=`<span class="lb ${lc(L)}">LSI ${L.toFixed(2)} — ${ll(L)}</span>`+nudge;
+  }
   return L;
 }
 
@@ -2066,12 +2107,12 @@ function getVD(){
   const tend=window._visitEnd||new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   const durMin=window._visitStartMs?Math.max(0,Math.round((_endMs-window._visitStartMs)/60000)):null;
   return{vid:'v'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),mt:Date.now(),cid:parseInt(document.getElementById('vc').value),dt:localDate(),tm:tend,tstart:window._visitStart||null,tend,dur:durMin,
-    temp:gv('vtemp'),fc:gv('vfc'),ph:gv('vph'),alk:gv('valk'),ch:gv('vch'),cya:gv('vcya'),salt:gv('vsalt'),phos:gv('vphos'),tds:gv('vtds'),lsi:lsi,
+    temp:gv('vtemp'),fc:gv('vfc'),ph:gv('vph'),alk:gv('valk'),ch:gv('vch'),cya:gv('vcya'),salt:gv('vsalt'),phos:gv('vphos'),tds:gv('vtds'),lsi:lsi,lsix:window._lsiCarried||null,
     cla:gv('vcla'),acid:gv('vacid'),bic:gv('vbic'),cyaa:gv('vcyaa'),salta:gv('vsalta'),cacl:gv('vcacl'),pr:gv('vpr'),oth:gv('vother'),
     br:document.getElementById('vbr').checked,tb:document.getElementById('vtb').checked,va:document.getElementById('vva').checked,skm:document.getElementById('vskm').checked,bw:document.getElementById('vbw').checked,sk:document.getElementById('vsk').checked,pb:document.getElementById('vpb').checked,pi:document.getElementById('vpi').checked,
     svo:gv('vsvo'),ltg:document.getElementById('vltg').checked,mdec:window._mdec||null,ntc:gv('vntc'),nvn:gv('vnvn'),ofn:gv('vofn'),ofnDone:false,ph2b:[...photosBefore],ph2a:[...photosAfter],sent:false};
 }
-function clrV(){document.querySelectorAll('#pg-vis input[type="number"],#pg-vis input[type="text"],#pg-vis textarea').forEach(e=>e.value='');document.querySelectorAll('#pg-vis input[type="checkbox"]').forEach(e=>e.checked=false);chkBicCa();window._visitStart=null;window._visitStartMs=null;window._visitEnd=null;window._visitEndMs=null;window._beforePrompted=null;window._afterPrompted=null;document.getElementById('lsi').innerHTML='<span class="lb lg">Enter readings</span>';document.getElementById('dpanel').innerHTML='';photosBefore=[];photosAfter=[];rPh();clearDraft();document.getElementById('vc').selectedIndex=0;onVC();}
+function clrV(){document.querySelectorAll('#pg-vis input[type="number"],#pg-vis input[type="text"],#pg-vis textarea').forEach(e=>e.value='');document.querySelectorAll('#pg-vis input[type="checkbox"]').forEach(e=>e.checked=false);chkBicCa();window._visitStart=null;window._visitStartMs=null;window._visitEnd=null;window._visitEndMs=null;window._beforePrompted=null;window._afterPrompted=null;window._lsiCarried=null;document.getElementById('lsi').innerHTML='<span class="lb lg">Enter readings</span>';document.getElementById('dpanel').innerHTML='';photosBefore=[];photosAfter=[];rPh();clearDraft();document.getElementById('vc').selectedIndex=0;onVC();}
 function cancelVisit(){if(document.getElementById('vc').value&&!confirm('Clear this visit form? Unsaved data will be lost.'))return;clrV();document.getElementById('vc').selectedIndex=0;document.getElementById('vqi').innerHTML='';document.getElementById('dpanel').innerHTML='';document.getElementById('vsalt-wrap').style.display='none';document.getElementById('vsalta-wrap').style.display='none';toast('Form cleared');}
 function chkRouteComplete(d){/* v7.3: superseded by flowAfterSaveUI (guided route flow) */}
 function saveV(){
@@ -2409,7 +2450,7 @@ function showVisitDetail(v){
     ${v.salt?'<tr><td>Salt</td><td>'+v.salt+' ppm</td><td style="color:var(--g400);font-size:11px;">2700–3400 ppm</td></tr>':''}
     ${v.phos?'<tr><td>Phosphates</td><td>'+v.phos+' ppb</td><td style="color:var(--g400);font-size:11px;">Under 500</td></tr>':''}
     ${v.tds?'<tr><td>TDS</td><td>'+v.tds+'</td><td style="color:var(--g400);font-size:11px;">—</td></tr>':''}
-    ${v.lsi!==null&&v.lsi!==undefined?'<tr><td>LSI</td><td><span class="lb '+lc(v.lsi)+'" style="font-size:11px;padding:2px 8px;">'+v.lsi.toFixed(2)+' — '+ll(v.lsi)+'</span></td><td style="color:var(--g400);font-size:11px;">-0.3 to +0.3</td></tr>':''}
+    ${v.lsi!==null&&v.lsi!==undefined?'<tr><td>LSI</td><td><span class="lb '+lc(v.lsi)+'" style="font-size:11px;padding:2px 8px;">'+v.lsi.toFixed(2)+' — '+ll(v.lsi)+'</span>'+(v.lsix?' <span style="font-size:10px;color:var(--g400);">(approx · carried '+v.lsix+')</span>':'')+'</td><td style="color:var(--g400);font-size:11px;">-0.3 to +0.3</td></tr>':''}
   </table></div>`;
 
   // Chemicals Added
@@ -2680,7 +2721,10 @@ function projAfter(v,c){
 function visitStatus(v,c){
   const pr=projAfter(v,c);
   let depLSI=null;const t=parseFloat(v.temp),td=parseFloat(v.tds);
-  if(pr.gal>0&&!isNaN(t)&&!isNaN(pr.dPH)&&!isNaN(pr.dALK)&&!isNaN(pr.dCH)){
+  // v7.4.3 guard: blank readings parse to 0 in projAfter and doLSI clamps 0 up to 1,
+  // which used to stamp garbage departure LSIs (~-2.5, "Treated") on CH-blank dosed visits.
+  // Require real pH, Alk, and CH; otherwise fall back to the stored arrival LSI below.
+  if(pr.gal>0&&!isNaN(t)&&parseFloat(v.ph)>0&&pr.dALK>0&&pr.dCH>0){
     depLSI=doLSI(t,pr.dPH,pr.dALK,pr.dCH,isNaN(pr.dCYA)?0:pr.dCYA,td);
   }
   const sl=pr.hasD&&depLSI!==null?depLSI:(v.lsi!==undefined&&v.lsi!==null?v.lsi:null);
@@ -3440,7 +3484,7 @@ function exportXLSX(){
     'Dep FC ppm','Dep pH','Dep Alk ppm','Dep CH ppm','Dep CYA ppm','Dep Salt ppm','Dep LSI','Water Status',
     'Weather Rate ppm/day','Measured Decay ppm/day','Lightning',
     'Brushed','Tile Brushed','Vacuumed','Skimmed','BW/Filter','Skimmer Baskets','Pump Basket','Pad Inspect','Other Service',
-    'Note to Client','Next Visit Notes','Office Notes','Photos Before','Photos After','Photos Archived','Drive Folder','Report Sent','Modified','Skipped','Skip Reason'];
+    'Note to Client','Next Visit Notes','Office Notes','Photos Before','Photos After','Photos Archived','Drive Folder','Report Sent','Modified','Skipped','Skip Reason','LSI Carried'];
   const vData=[...DB.visits].sort((a,b)=>b.dt.localeCompare(a.dt)).map(v=>{
     const c=DB.clients.find(x=>x.id===v.cid);
     const dur=v.tstart&&v.tm?calcDur(v.tstart,v.tm):'';
@@ -3455,7 +3499,7 @@ function exportXLSX(){
       v.br?'Y':'N',v.tb?'Y':'N',v.va?'Y':'N',v.skm?'Y':'N',v.bw?'Y':'N',v.sk?'Y':'N',v.pb?'Y':'N',v.pi?'Y':'N',v.svo||'',
       v.ntc||v.notes||'',v.nvn||v.act||'',v.ofn||v.eq||'',
       (v.ph2b||[]).length,(v.ph2a||[]).length,v.pharch||0,(v.phlk&&v.phlk.folder)||'',
-      v.sent?'Y':'N',v.mt?new Date(v.mt).toISOString():'',v.skip?'Y':'N',v.skip?((v.skipReason||'')+(v.skipNote?' \u2014 '+v.skipNote:'')):''];
+      v.sent?'Y':'N',v.mt?new Date(v.mt).toISOString():'',v.skip?'Y':'N',v.skip?((v.skipReason||'')+(v.skipNote?' \u2014 '+v.skipNote:'')):'',v.lsix||''];
   });
   const ws3=XLSX.utils.aoa_to_sheet([vHeaders,...vData]);
   ws3['!cols']=vHeaders.map(h=>({wch:Math.max(h.length+2,10)}));
