@@ -186,7 +186,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div style="margin-top:10px;text-align:center;"><div style="font-size:11px;color:var(--g400);margin-bottom:4px;">Langelier Saturation Index</div><div id="lsi"><span class="lb lg">Enter readings</span></div></div>
 </div></div>
 <div id="dpanel"></div>
-<div class="cd"><div class="st" onclick="tog(this)">Chemicals Added <span class="ar">▶</span></div><div class="sc">
+<div class="cd"><div class="st op" onclick="tog(this)">Chemicals Added <span class="ar">▶</span></div><div class="sc op">
 <div class="fr"><div class="fg"><label class="fl">Liquid Chlorine (gal)</label><input type="number" class="fi" id="vcla" step="0.25" oninput="doCalc()"></div><div class="fg"><label class="fl">Muriatic Acid (gal)</label><input type="number" class="fi" id="vacid" step="0.25" oninput="doCalc()"></div></div>
 <div class="fr"><div class="fg"><label class="fl">Sodium Bicarb (lbs)</label><input type="number" class="fi" id="vbic" step="3" oninput="chkBicCa();doCalc()"><div id="vbic-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px;font-weight:600;">⚠️ Cannot add with calcium — schedule next visit</div></div><div class="fg"><label class="fl">CYA Added (lbs)</label><input type="number" class="fi" id="vcyaa" step="3" oninput="doCalc()"></div></div>
 <div class="fr"><div class="fg" id="vsalta-wrap" style="display:none;"><label class="fl">Salt Added (lbs)</label><input type="number" class="fi" id="vsalta" step="1" oninput="doCalc()"></div><div class="fg"><label class="fl">Calcium Chloride (lbs)</label><input type="number" class="fi" id="vcacl" step="1" oninput="chkBicCa();doCalc()"><div id="vcacl-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px;font-weight:600;">⚠️ Cannot add with bicarb — schedule next visit</div></div></div>
@@ -198,7 +198,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="fr"><label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 0;"><input type="checkbox" id="vva"> Vacuumed</label><label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 0;"><input type="checkbox" id="vskm"> Skimmed</label></div>
 <div class="fr"><label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 0;"><input type="checkbox" id="vbw">  Backwash / Filter Cartridge Cleaned</label><label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 0;"><input type="checkbox" id="vsk"> Skimmer Baskets</label></div>
 <div class="fr"><label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 0;"><input type="checkbox" id="vpb"> Pump Basket</label><label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 0;"><input type="checkbox" id="vpi"> Pad Inspection</label></div>
-<div class="fr"><label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 0;color:var(--gold);font-weight:600;"><input type="checkbox" id="vltg"> ⚡ No pole work — lightning</label></div>
+<div class="fr"><label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 0;color:var(--gold);font-weight:600;"><input type="checkbox" id="vltg" onchange="ltgClear(this)"> ⚡ No pole work — lightning</label></div>
 <div class="fg" style="margin-top:8px;"><label class="fl">Other Service</label><input type="text" class="fi" id="vsvo" placeholder="Describe any other service performed"></div>
 </div></div>
 <div class="cd"><div class="st" onclick="tog(this)">Photos <span class="ar">▶</span></div><div class="sc">
@@ -259,6 +259,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:14px;">⚠️ Pool Volume (Required for Dosing)</div>
 <div class="fr"><div class="fg"><label class="fl">Pool Gallons *</label><input type="number" class="fi" id="cgal" placeholder="e.g. 15000" style="border-color:var(--teal);font-weight:600;font-size:18px;text-align:center;"></div><div class="fg"><label class="fl">Pool Type</label><select class="fs" id="cpt"><option>Inground</option><option>Above Ground</option></select></div></div>
 <div class="fr"><div class="fg"><label class="fl">Chlorination</label><select class="fs" id="cslp" onchange="togSalt()"><option>Regular Chlorine</option><option>Salt Pool</option></select></div><div class="fg" id="salt-target-wrap" style="display:none;"><label class="fl">Target Salt (ppm)</label><input type="number" class="fi" id="cslt" value="3200" placeholder="3200"></div></div>
+<div class="fr"><div class="fg"><label class="fl">Borates (ppm)</label><input type="number" class="fi" id="cbor" placeholder="0 = none"></div><div class="fg"></div></div>
 </div>
 <div class="cd"><div class="st" onclick="tog(this)">Service <span class="ar">▶</span></div><div class="sc">
 <div class="fr"><div class="fg"><label class="fl">Service Day</label><select class="fs" id="cdy"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select></div><div class="fg"><label class="fl">Frequency</label><select class="fs" id="cfq"><option>Weekly</option><option>Biweekly</option><option>Monthly</option></select></div></div>
@@ -408,7 +409,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.4.4';
+const APP_VER='v7.6';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -446,6 +447,87 @@ function clearCatchups(){
 function bookOf(c){return (c&&c.bk)?c.bk:'Ripple';}
 function emailOn(c){if(!c)return false;if(c.emOn==='Y')return true;if(c.emOn==='N')return false;return bookOf(c)==='Ripple';}
 function allBooks(){const s={'Ripple':1};DB.clients.forEach(c=>{s[bookOf(c)]=1;});return Object.keys(s).sort((a,b)=>a==='Ripple'?-1:(b==='Ripple'?1:a.localeCompare(b)));}
+/* ═══ v7.6: PRESET SERVICES + LIGHTNING CLEAR ═══ */
+// New visits only: the seven always-done services start checked. vbw and vltg stay a conscious tap.
+// Never fires on the edit form (ev-* ids) or during draft restore (guarded at the onVC call site).
+function presetServices(){['vbr','vtb','vva','vskm','vsk','vpb','vpi'].forEach(i=>{const e=document.getElementById(i);if(e)e.checked=true;});}
+// Clear-on-check only: ticking lightning unchecks the four pole-work services once.
+// Unticking restores nothing, and a deliberate re-tick after lightning is never stomped.
+function ltgClear(e){if(!e||!e.checked)return;['vbr','vtb','vva','vskm'].forEach(i=>{const x=document.getElementById(i);if(x)x.checked=false;});}
+/* ═══ v7.6: FIELD FLAGS — maintenance due + Water Watch, internal only ═══ */
+function _flagBox(msg,kind){
+  const s=kind==='red'?'color:var(--red);background:rgba(232,102,108,0.10);border:1px solid rgba(232,102,108,0.45);'
+    :kind==='gray'?'color:var(--g600);background:rgba(11,29,58,0.04);border:1px solid var(--g200);'
+    :'color:#b45309;background:rgba(243,174,78,0.12);border:1px solid rgba(243,174,78,0.45);';
+  return '<div style="font-size:11px;'+s+'border-radius:8px;padding:6px 10px;margin-bottom:8px;">'+msg+'</div>';
+}
+// Filter service due: DERIVED from visit history (most recent real visit with bw checked), never stored.
+// Nudge at 30 days, louder at 45. Silent on never-visited pools; quiet gray note when history exists but no bw ever.
+function filterDueFlag(cid){
+  const real=[...DB.visits].filter(v=>v.cid===cid&&!v.skip).sort((a,b)=>b.dt.localeCompare(a.dt));
+  if(!real.length)return '';
+  const fv=real.find(v=>v.bw);
+  if(!fv)return _flagBox('🧽 No filter service on record for this pool.','gray');
+  const days=Math.round((new Date(localDate())-new Date(fv.dt))/86400000);
+  if(days>=45)return _flagBox('🧽 Filter service overdue — last recorded '+days+' days ago ('+fv.dt+').','red');
+  if(days>=30)return _flagBox('🧽 Filter service last recorded '+days+' days ago ('+fv.dt+') — coming due.');
+  return '';
+}
+// Water Watch in the field: same math and thresholds as the Code.gs digest (d2WatchFlags_),
+// computed from local visit history so the flag reaches Victor at the pool, not Friday's email.
+// Advisory wording on purpose: "worth a look", never "leak".
+function waterWatchLocal(cid){
+  const out=[];const c=DB.clients.find(x=>x.id===cid);if(!c)return out;
+  const vs=DB.visits.filter(v=>v.cid===cid&&!v.skip).sort((a,b)=>String(a.dt).localeCompare(String(b.dt)));
+  if(!vs.length)return out;
+  if(c.slp==='Salt Pool'){
+    const salts=vs.filter(v=>{const n=parseFloat(v.salt);return !isNaN(n)&&n>0;});
+    if(salts.length>=2){
+      const last=parseFloat(salts[salts.length-1].salt),prev=parseFloat(salts[salts.length-2].salt);
+      if(prev-last>=400)out.push('Salt fell '+Math.round(prev-last)+' ppm between tests ('+salts[salts.length-2].dt+' to '+salts[salts.length-1].dt+') — worth a look for water loss.');
+      else if(last-prev>=500)out.push('Salt rose '+Math.round(last-prev)+' ppm between tests — evaporation concentration, or note the addition.');
+    }
+  }
+  const chs=vs.filter(v=>{const n=parseFloat(v.ch);return !isNaN(n)&&n>0;});
+  if(chs.length>=2){
+    const lastCh=chs[chs.length-1],lastD=new Date(lastCh.dt+'T12:00:00');
+    let ref=null,bestGap=1e9;
+    chs.forEach(v=>{if(v===lastCh)return;const gap=Math.abs((lastD-new Date(v.dt+'T12:00:00'))/86400000-28);if(gap<bestGap){bestGap=gap;ref=v;}});
+    if(ref){
+      const days=Math.round((lastD-new Date(ref.dt+'T12:00:00'))/86400000);
+      if(days>=14&&days<=45){
+        const drop=parseFloat(ref.ch)-parseFloat(lastCh.ch);
+        if(drop>=40)out.push('Calcium fell '+Math.round(drop)+' ppm over '+days+' days — calcium only leaves with water; worth a look.');
+      }
+    }
+  }
+  const decs=vs.map(v=>{const n=parseFloat(v.mdec);return isNaN(n)?null:n;}).filter(n=>n!==null&&n>0);
+  if(decs.length>=6){
+    const last3=decs.slice(-3),prev3=decs.slice(-6,-3);
+    const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+    const aL=avg(last3),aP=avg(prev3);
+    if(aL-aP>=0.5&&aL>=1.5)out.push('Chlorine demand is climbing ('+aP.toFixed(1)+' to '+aL.toFixed(1)+' ppm/day over the last six visits) — something is eating chlorine.');
+  }
+  return out;
+}
+function fieldFlagsHtml(cid){
+  if(isNaN(cid))return '';
+  let h=filterDueFlag(cid);
+  waterWatchLocal(cid).forEach(m=>{h+=_flagBox('💧 '+m);});
+  return h;
+}
+/* ═══ v7.6: STORM LINE (morning kickoff only) ═══ */
+// Reads today's thunderstorm hours cached by refreshSummer (Open-Meteo weather codes 95/96/99).
+function stormLine(){
+  try{
+    const s=SUMMER.storm;if(!s||!s.byDay)return '';
+    const hrs=s.byDay[localDate()];if(!hrs||!hrs.length)return '';
+    const fmt=h=>{const x=h%12||12;return x+(h<12?' AM':' PM');};
+    const lo=Math.min.apply(null,hrs),hi=Math.max.apply(null,hrs);
+    const rng=lo===hi?('around '+fmt(lo)):(fmt(lo)+' to '+fmt(hi));
+    return '<div style="font-size:12px;font-weight:600;color:#b45309;background:rgba(243,174,78,0.12);border:1px solid rgba(243,174,78,0.45);border-radius:8px;padding:8px 10px;margin-bottom:10px;">⛈ Thunderstorms forecast today '+rng+' — front-load the pole work.</div>';
+  }catch(e){return '';}
+}
 /* v7.4: collision-proof client ids (kills the Ike bug class). Date.now()*1000 + random, uniqueness-checked. */
 function newClientId(){let id=Date.now()*1000+Math.floor(Math.random()*1000);while(DB.clients.some(c=>c.id===id)||(DB.tomb||[]).some(t=>t.t==='c'&&t.id===id))id++;return id;}
 function popBooks(cur){
@@ -503,7 +585,7 @@ function flowAfterSave(cid){const f=flowGet();cid=parseInt(cid);
 /*FLOW-PURE-END*/
 function nextMaps(cid){const c=DB.clients.find(x=>x.id===cid);if(!c)return;closeM('mo-next');openMaps(c.ad,c.ci||'',cid);}
 function nextLog(cid){const c=DB.clients.find(x=>x.id===cid);if(!c)return;closeM('mo-next');startArmed(cid);} // v7.4.4: log the next stop directly, no maps detour
-function openNext(auto){
+function openNext(auto,kick){
   const q=flowQueue();const c=flowNext();
   const body=document.getElementById('mo-next-body');const title=document.getElementById('mo-next-title');
   if(!body||!title)return;
@@ -513,6 +595,7 @@ function openNext(auto){
   const isCb=f.cb.includes(c.id);
   title.textContent=isMiss?'Catch-Up Stop':(isCb?'Circle-Back Stop':'Next Stop');
   body.innerHTML=`
+    ${kick?stormLine():''}
     ${isMiss?`<div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:4px;letter-spacing:0.5px;">⏪ MISSED ${(c.sd||'').toUpperCase()} — PRIORITY</div>`:''}
     ${isCb?`<div style="font-size:11px;font-weight:700;color:var(--yel);margin-bottom:4px;letter-spacing:0.5px;">↩ CIRCLE-BACK</div>`:''}
     <div style="font-size:17px;font-weight:600;color:var(--navy);font-family:'Playfair Display',serif;">${c.ln}, ${c.fn}</div>
@@ -738,7 +821,7 @@ function onWake(){
       if(!f.fin&&unresolvedWeek().length){f.fin=true;flowSave(f);setTimeout(function(){openFinalize();},500);}
     }else if(!warned&&!f.kick){
       const noneToday=!DB.visits.some(v=>v.dt===localDate());
-      if(noneToday&&flowNext()){f.kick=true;flowSave(f);setTimeout(function(){openNext(true);},500);}
+      if(noneToday&&flowNext()){f.kick=true;flowSave(f);setTimeout(function(){openNext(true,1);},500);}
     }
     try{renderFlowCard();}catch(e){}
   }catch(e){}
@@ -863,7 +946,7 @@ async function refreshSummer(force){
   const age=Date.now()-(SUMMER.checked||0);
   if(!force&&age<12*3600*1000){rSummerBadge();return;} // refresh twice a day at most
   try{
-    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=27.273&longitude=-80.358&daily=temperature_2m_max&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York');
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=27.273&longitude=-80.358&daily=temperature_2m_max&hourly=weather_code&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York');
     const j=await r.json();
     const highs=(j.daily&&j.daily.temperature_2m_max)||[];
     if(highs.length){
@@ -873,6 +956,14 @@ async function refreshSummer(force){
       SUMMER.checked=Date.now();
       saveSummer();
     }
+    // v7.6: cache today's + this week's thunderstorm hours (Open-Meteo weather codes 95/96/99)
+    try{
+      const ht=(j.hourly&&j.hourly.time)||[],hc=(j.hourly&&j.hourly.weather_code)||[];
+      const byDay={};
+      ht.forEach((t,i)=>{if(hc[i]>=95){const d=t.slice(0,10),hh=parseInt(t.slice(11,13),10);(byDay[d]=byDay[d]||[]).push(hh);}});
+      SUMMER.storm={byDay:byDay};
+      saveSummer();
+    }catch(e){}
   }catch(e){/* offline: keep last known state, dosing falls back gracefully */}
   rSummerBadge();
   if(document.getElementById('pg-vis').classList.contains('act'))doCalc();
@@ -1350,7 +1441,7 @@ function rDash(){
   rSummerBadge();
   const now=new Date(),dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()],td=localDate(now);
   const ac=DB.clients.filter(c=>c.st==='Active'),tv=DB.visits.filter(v=>v.dt===td).length,tr=ac.filter(c=>c.sd===dn).length;
-  const unsent=DB.visits.filter(v=>!v.sent&&!v.skip);
+  const unsent=DB.visits.filter(v=>{const c=DB.clients.find(x=>x.id===v.cid);return !v.sent&&!v.skip&&emailOn(c);}); // v7.6: queue respects email governance, display-only
   const wa=new Date(now);wa.setDate(wa.getDate()-7);const wv=DB.visits.filter(v=>new Date(v.dt)>=wa).length;
   document.getElementById('ds').innerHTML=`<div class="ss"><div class="sn">${ac.length}</div><div class="sl2">Active Clients</div></div><div class="ss" style="${unsent.length>0?'border-left:3px solid var(--gold);':''}"><div class="sn">${unsent.length}</div><div class="sl2">Unsent Reports</div></div><div class="ss"><div class="sn">${tr}</div><div class="sl2">Stops Today</div></div><div class="ss"><div class="sn">${tv}</div><div class="sl2">Completed Today</div></div>`;
 
@@ -1408,14 +1499,14 @@ function clrCF(){document.querySelectorAll('#mo-c input,#mo-c textarea').forEach
 function togSalt(){const isSalt=document.getElementById('cslp').value==='Salt Pool';document.getElementById('salt-target-wrap').style.display=isSalt?'':'none';}
 
 function getCF(){
-  const d={ln:gv('cln'),fn:gv('cfn'),ad:gv('cad'),ci:gv('cci'),p1:gv('cp1'),p2:gv('cp2'),em:gv('cem'),pc:gv('cpc'),rf:gv('crf'),sd:gv('cdy'),fq:gv('cfq'),sty:gv('cst'),rt:gv('crt'),no:gv('cno'),sn:gv('csn'),pe:gv('cpe'),pt:gv('cpt'),gal:gv('cgal'),slp:gv('cslp'),sltgt:gv('cslt'),su:gv('csu'),cg:gv('ccg'),sp:gv('csp'),ws:gv('cws'),sk:gv('csk'),re:gv('cre'),md:gv('cmd'),wf:gv('cwf'),sn2:gv('csn2'),gc:gv('cgt'),gs:gv('cgs'),es:gv('ces'),dg:gv('cdg'),df:gv('cdf'),op:gv('cop'),cn:gv('ccn'),gn:gv('cgn'),bk:(function(){const b=gv('cbk');return(!b||b==='__new')?'Ripple':b;})(),emOn:gv('cemn'),st:gv('cstt')||'Active'};
+  const d={ln:gv('cln'),fn:gv('cfn'),ad:gv('cad'),ci:gv('cci'),p1:gv('cp1'),p2:gv('cp2'),em:gv('cem'),pc:gv('cpc'),rf:gv('crf'),sd:gv('cdy'),fq:gv('cfq'),sty:gv('cst'),rt:gv('crt'),no:gv('cno'),sn:gv('csn'),pe:gv('cpe'),pt:gv('cpt'),gal:gv('cgal'),slp:gv('cslp'),sltgt:gv('cslt'),su:gv('csu'),cg:gv('ccg'),sp:gv('csp'),ws:gv('cws'),sk:gv('csk'),re:gv('cre'),md:gv('cmd'),wf:gv('cwf'),sn2:gv('csn2'),gc:gv('cgt'),gs:gv('cgs'),es:gv('ces'),dg:gv('cdg'),df:gv('cdf'),op:gv('cop'),cn:gv('ccn'),gn:gv('cgn'),bk:(function(){const b=gv('cbk');return(!b||b==='__new')?'Ripple':b;})(),emOn:gv('cemn'),st:gv('cstt')||'Active',bor:gv('cbor')};
   EK.forEach(k=>{d[k+'M']=gv('e'+k+'m');d[k+'D']=gv('e'+k+'d');d[k+'Y']=gv('e'+k+'y');d[k+'S']=gv('e'+k+'s');});
   return d;
 }
 
 function fillCF(c){
   popBooks(bookOf(c));
-  const m={'cln':c.ln,'cfn':c.fn,'cad':c.ad,'cci':c.ci||'Port St. Lucie','cp1':c.p1,'cp2':c.p2,'cem':c.em,'cpc':c.pc,'crf':c.rf,'cdy':c.sd,'cfq':c.fq,'cst':c.sty,'crt':c.rt,'cno':c.no,'csn':c.sn,'cpe':c.pe,'cpt':c.pt,'cgal':c.gal,'cslp':c.slp||'Regular Chlorine','cslt':c.sltgt||'3200','csu':c.su,'ccg':c.cg,'csp':c.sp,'cws':c.ws,'csk':c.sk||'1','cre':c.re||'2','cmd':c.md,'cwf':c.wf,'csn2':c.sn2,'cgt':c.gc,'cgs':c.gs,'ces':c.es,'cdg':c.dg,'cdf':c.df,'cop':c.op,'ccn':c.cn,'cgn':c.gn,'cemn':c.emOn||'','cstt':c.st||'Active'};
+  const m={'cln':c.ln,'cfn':c.fn,'cad':c.ad,'cci':c.ci||'Port St. Lucie','cp1':c.p1,'cp2':c.p2,'cem':c.em,'cpc':c.pc,'crf':c.rf,'cdy':c.sd,'cfq':c.fq,'cst':c.sty,'crt':c.rt,'cno':c.no,'csn':c.sn,'cpe':c.pe,'cpt':c.pt,'cgal':c.gal,'cslp':c.slp||'Regular Chlorine','cslt':c.sltgt||'3200','csu':c.su,'ccg':c.cg,'csp':c.sp,'cws':c.ws,'csk':c.sk||'1','cre':c.re||'2','cmd':c.md,'cwf':c.wf,'csn2':c.sn2,'cgt':c.gc,'cgs':c.gs,'ces':c.es,'cdg':c.dg,'cdf':c.df,'cop':c.op,'ccn':c.cn,'cgn':c.gn,'cemn':c.emOn||'','cstt':c.st||'Active','cbor':c.bor||''};
   EK.forEach(k=>{m['e'+k+'m']=c[k+'M']||'';m['e'+k+'d']=c[k+'D']||'';m['e'+k+'y']=c[k+'Y']||'';m['e'+k+'s']=c[k+'S']||'';});
   Object.entries(m).forEach(([id,val])=>{const e=document.getElementById(id);if(e)e.value=val||'';});
   togSalt();
@@ -1441,7 +1532,7 @@ function viewC(id){
   vid=id;const c=DB.clients.find(x=>x.id===id);if(!c)return;
   document.getElementById('vn').textContent=c.ln+', '+c.fn;
   const vs=DB.visits.filter(v=>v.cid===id).sort((a,b)=>b.dt.localeCompare(a.dt));const la=vs[0];
-  let h=`<div class="cd" style="font-size:13px;line-height:1.8;"><strong><span onclick="openMaps('${c.ad}','${c.ci}',${c.id})" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}, ${c.ci}</span></strong><br>📞 ${phoneLinks(c.p1)}${c.p2?'<br>📞 '+phoneLinks(c.p2):''}<br>📧 ${c.em||'N/A'}<br>\ud83d\udcd2 ${bookOf(c)} book${emailOn(c)?'':' \u00b7 \ud83d\udce7 report emails off'}<br>\ud83d\uddd3 ${c.sd} \u00b7 ${c.fq} · ${c.sty} · $${c.rt||'?'}/mo<br>🔑 Gate: ${c.gc||'N/A'} · Walk: ${c.gs} · Equip: ${c.es}<br>${c.dg?'🐕 '+c.dg+' ('+c.df+')<br>':''}🏊 ${c.pt} · ${c.gal?Number(c.gal).toLocaleString():'?'} gal · ${c.su} · ${c.ws} · ${c.cg==='Yes'?'Caged':'Open'} · ${c.slp==='Salt Pool'?'🧂 Salt':'💧 Chlorine'}</div>`;
+  let h=fieldFlagsHtml(id)+`<div class="cd" style="font-size:13px;line-height:1.8;"><strong><span onclick="openMaps('${c.ad}','${c.ci}',${c.id})" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}, ${c.ci}</span></strong><br>📞 ${phoneLinks(c.p1)}${c.p2?'<br>📞 '+phoneLinks(c.p2):''}<br>📧 ${c.em||'N/A'}<br>\ud83d\udcd2 ${bookOf(c)} book${emailOn(c)?'':' \u00b7 \ud83d\udce7 report emails off'}<br>\ud83d\uddd3 ${c.sd} \u00b7 ${c.fq} · ${c.sty} · $${c.rt||'?'}/mo<br>🔑 Gate: ${c.gc||'N/A'} · Walk: ${c.gs} · Equip: ${c.es}<br>${c.dg?'🐕 '+c.dg+' ('+c.df+')<br>':''}🏊 ${c.pt} · ${c.gal?Number(c.gal).toLocaleString():'?'} gal · ${c.su} · ${c.ws} · ${c.cg==='Yes'?'Caged':'Open'} · ${c.slp==='Salt Pool'?'🧂 Salt':'💧 Chlorine'}${parseFloat(c.bor)>0?' · Borates '+c.bor+' ppm':''}</div>`;
   if(la&&la.skip){h+=`<div class="cd"><div class="ch">Last Visit \u2014 ${la.dt}</div><div style="font-size:12px;">\u23ed Skipped \u2014 ${la.skipReason||''}${la.skipNote?' ('+la.skipNote+')':''}</div></div>`;}
   else if(la){const la_ntc=la.ntc||(la.notes&&!la.act&&!la.eq?la.notes:null);h+=`<div class="cd"><div class="ch">Last Visit — ${la.dt}</div><div style="font-size:12px;line-height:1.8;">FC:${la.fc||'-'} · pH:${la.ph||'-'} · Alk:${la.alk||'-'} · CH:${la.ch||'-'} · CYA:${la.cya||'-'}${la.lsi!==null?`<br><span class="lb ${lc(la.lsi)}" style="font-size:12px;">LSI ${la.lsi.toFixed(2)} — ${ll(la.lsi)}</span>`:''}<br>${vChemStr(la)}${vSvcStr(la)}${la_ntc?'<br>📋 '+la_ntc:''}</div></div>`;}
   if(vs.length>0){h+='<div class="cd"><div class="ch">Visit History</div>'+vs.slice(0,10).map((v,i)=>{
@@ -1515,13 +1606,14 @@ function onVC(){
       if(parseFloat(lastVisit.salta))chems.push(lastVisit.salta+' lbs salt');
       if(parseFloat(lastVisit.cacl))chems.push(lastVisit.cacl+' lbs CaCl');
       const rd=(v,u)=>v!==''&&v!==undefined&&v!==null?v+(u||''):'—';
-      lvEl.innerHTML='<div style="background:rgba(11,29,58,0.04);border:1px solid var(--g200);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--navy);">'
+      lvEl.innerHTML=fieldFlagsHtml(id)+'<div style="background:rgba(11,29,58,0.04);border:1px solid var(--g200);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--navy);">'
         +'<div style="font-size:10px;font-weight:700;color:var(--g600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">📖 Last Visit — '+lastVisit.dt+' ('+days+' day'+(days===1?'':'s')+' ago)</div>'
         +'<div>FC '+rd(lastVisit.fc)+(depFC!==null?' → left at ~'+depFC:'')+' · pH '+rd(lastVisit.ph)+' · Alk '+rd(lastVisit.alk)+' · CYA '+rd(lastVisit.cya)+(c.slp==='Salt Pool'?' · Salt '+rd(lastVisit.salt):'')+'</div>'
         +(chems.length?'<div style="margin-top:2px;color:var(--g600);">Added: '+chems.join(', ')+'</div>':'')
         +'</div>';
     }else{lvEl.innerHTML='';}
   }
+  if(!window._restoringDraft)presetServices(); // v7.6: new-visit defaults; edit form (ev-*) and draft restore never touch this
   doCalc();
   updVisitHeader();
   maybeBeforePrompt();
@@ -1781,7 +1873,8 @@ function calcLSI(){
     else{const ageD=Math.round((new Date(localDate())-new Date(cv.ch.dt))/86400000);if(ageD>40){nudge='<div style="font-size:11px;color:#b45309;background:rgba(243,174,78,0.12);border:1px solid rgba(243,174,78,0.45);border-radius:8px;padding:6px 10px;margin-top:6px;">🧪 CH reading is '+Math.round(ageD/7)+' weeks old, worth retesting.</div>';}}
   }
   if(isNaN(t)||isNaN(ph)||isNaN(a)||isNaN(ch)){el.innerHTML='<span class="lb lg">Enter readings</span>'+nudge;return null;}
-  const L=doLSI(t,ph,a,ch,cy,tds);
+  const _bc=DB.clients.find(x=>x.id===cid);
+  const L=doLSI(t,ph,a,ch,cy,tds,_bc?parseFloat(_bc.bor)||0:0);
   if(used.length){
     window._lsiCarried=used.map(u=>u.f).join(',');
     const src=used.map(u=>u.n+' '+u.v+' ('+lsiFmtDate(u.dt)+')').join(' · ');
@@ -2054,7 +2147,7 @@ function calcDose(){
 // Correct AWWA Langelier Saturation Index
 // LSI = pH - pHs, where pHs = (9.3 + A + B) - (C + D)
 // A = TDS factor, B = temp factor, C = calcium factor, D = alkalinity factor
-function doLSI(temp,ph,alk,ch,cya,tds){
+function doLSI(temp,ph,alk,ch,cya,tds,bor){
   const tc=(temp-32)*5/9;
   // A = TDS factor: (log10(TDS) - 1) / 10, default TDS 1000
   const tdv=(!isNaN(tds)&&tds>0)?tds:1000;
@@ -2063,10 +2156,15 @@ function doLSI(temp,ph,alk,ch,cya,tds){
   const B=-13.12*Math.log10(tc+273)+34.55;
   // C = Calcium hardness factor
   const C=Math.log10(Math.max(ch,1))-0.4;
-  // D = Alkalinity factor: carbonate alkalinity = TA minus cyanurate alkalinity.
+  // D = Alkalinity factor: carbonate alkalinity = TA minus cyanurate alkalinity (and borate, if used).
   // Cyanurate correction is ~1/3 of CYA, pH-dependent (0.27 @ pH 7.2, 0.33 @ pH 7.6).
+  // v7.6 borate correction: borates register on a TA test but are not carbonate alkalinity.
+  // F(B) = 4.63 / (1 + 10^(9.0 - pH)) ppm CaCO3 per ppm borate; 0.177 @ pH 7.6, matching the
+  // published industry factor (0.17). bor absent or 0 = identical math to v7.4.4.
   let adjAlk=alk;
-  if(cya&&cya>0){const f=ph<=7.2?0.27:ph<7.6?0.30:ph<7.8?0.33:0.35;adjAlk=alk-(cya*f);if(adjAlk<1)adjAlk=1;}
+  if(cya&&cya>0){const f=ph<=7.2?0.27:ph<7.6?0.30:ph<7.8?0.33:0.35;adjAlk=adjAlk-(cya*f);}
+  if(bor&&bor>0){const fb=4.63/(1+Math.pow(10,9.0-ph));adjAlk=adjAlk-(bor*fb);}
+  if(adjAlk<1)adjAlk=1;
   const D=Math.log10(Math.max(adjAlk,1));
   // pHs = saturation pH
   const pHs=(9.3+A+B)-(C+D);
@@ -2185,7 +2283,7 @@ function genRpt(v){
   // Departure LSI
   let depLSI=null;
   if(gal>0&&!isNaN(temp_a)&&!isNaN(dPH)&&!isNaN(dALK)&&!isNaN(dCH)){
-    depLSI=doLSI(temp_a,dPH,dALK,dCH,isNaN(dCYA)?0:dCYA,tds_a);
+    depLSI=doLSI(temp_a,dPH,dALK,dCH,isNaN(dCYA)?0:dCYA,tds_a,(c&&parseFloat(c.bor))||0);
   }
 
   // Water balance label (client-friendly)
@@ -2528,7 +2626,7 @@ function showVisitDetail(v){
     // Departure LSI
     let depLSI=null;
     if(!isNaN(temp_v)&&!isNaN(dPH)&&!isNaN(dALK)&&!isNaN(dCH)){
-      depLSI=doLSI(temp_v,dPH,dALK,dCH,isNaN(dCYA)?0:dCYA,tds_v);
+      depLSI=doLSI(temp_v,dPH,dALK,dCH,isNaN(dCYA)?0:dCYA,tds_v,(c&&parseFloat(c.bor))||0);
     }
 
     // ── Next week arrival projections (7-day decay, fail-safe rate) ──
@@ -2546,7 +2644,7 @@ function showVisitDetail(v){
 
     let arrLSI=null;
     if(!isNaN(temp_v)&&!isNaN(nPH)&&!isNaN(nALK)&&!isNaN(nCH)){
-      arrLSI=doLSI(temp_v,nPH,nALK,nCH,isNaN(nCYA)?0:nCYA,tds_v);
+      arrLSI=doLSI(temp_v,nPH,nALK,nCH,isNaN(nCYA)?0:nCYA,tds_v,(c&&parseFloat(c.bor))||0);
     }
 
     // Build projection card
@@ -2682,7 +2780,8 @@ function saveEditVisit(){
   v.eq='';v.act='';v.notes='';
   // Recalc LSI
   const t=parseFloat(v.temp),p=parseFloat(v.ph),a=parseFloat(v.alk),c=parseFloat(v.ch),cy=parseFloat(v.cya),td=parseFloat(v.tds);
-  if(!isNaN(t)&&!isNaN(p)&&!isNaN(a)&&!isNaN(c)){v.lsi=doLSI(t,p,a,c,isNaN(cy)?0:cy,td);}
+  const _bc2=DB.clients.find(x=>x.id===v.cid);
+  if(!isNaN(t)&&!isNaN(p)&&!isNaN(a)&&!isNaN(c)){v.lsi=doLSI(t,p,a,c,isNaN(cy)?0:cy,td,(_bc2&&parseFloat(_bc2.bor))||0);}
   stampDeparture(v,DB.clients.find(x=>x.id===v.cid));
   v.mt=Date.now();save();kickSync();closeM('mo-ev');toast('Visit updated');
 }
@@ -2728,7 +2827,7 @@ function visitStatus(v,c){
   // which used to stamp garbage departure LSIs (~-2.5, "Treated") on CH-blank dosed visits.
   // Require real pH, Alk, and CH; otherwise fall back to the stored arrival LSI below.
   if(pr.gal>0&&!isNaN(t)&&parseFloat(v.ph)>0&&pr.dALK>0&&pr.dCH>0){
-    depLSI=doLSI(t,pr.dPH,pr.dALK,pr.dCH,isNaN(pr.dCYA)?0:pr.dCYA,td);
+    depLSI=doLSI(t,pr.dPH,pr.dALK,pr.dCH,isNaN(pr.dCYA)?0:pr.dCYA,td,(c&&parseFloat(c.bor))||0);
   }
   const sl=pr.hasD&&depLSI!==null?depLSI:(v.lsi!==undefined&&v.lsi!==null?v.lsi:null);
   let txt='Tested',col=[153,153,153];
@@ -3450,8 +3549,8 @@ function exportXLSX(){
   const wb=XLSX.utils.book_new();
 
   // ── SHEET 1: CLIENT ROSTER ──
-  const cHeaders=['Last Name','First Name','Address','City','Phone 1','Phone 2','Email','Preferred Contact','Service Day','Frequency','Service Type','Rate $/mo','Chlorination','Salt Target','Pool Type','Gallons','Surface','Caged','Spa','Water Source','Skimmers','Returns','Main Drain','Water Features','Gate Code','Walk Side','Equip Side','Dogs','Dog Friendly','Other Pets','Referral','Client Since','Notify','Personality','Chem Notes','General Notes','Book','Report Emails'];
-  const cData=DB.clients.map(c=>[c.ln,c.fn,c.ad,c.ci,c.p1,c.p2,c.em,c.pc,c.sd,c.fq,c.sty,c.rt,c.slp,c.sltgt,c.pt,c.gal,c.su,c.cg,c.sp,c.ws,c.sk,c.re,c.md,c.wf,c.gc,c.gs,c.es,c.dg,c.df,c.op,c.rf,c.sn,c.no,c.pe,c.cn,c.gn,bookOf(c),emailOn(c)?'On':'Off']);
+  const cHeaders=['Last Name','First Name','Address','City','Phone 1','Phone 2','Email','Preferred Contact','Service Day','Frequency','Service Type','Rate $/mo','Chlorination','Salt Target','Borates','Pool Type','Gallons','Surface','Caged','Spa','Water Source','Skimmers','Returns','Main Drain','Water Features','Gate Code','Walk Side','Equip Side','Dogs','Dog Friendly','Other Pets','Referral','Client Since','Notify','Personality','Chem Notes','General Notes','Book','Report Emails'];
+  const cData=DB.clients.map(c=>[c.ln,c.fn,c.ad,c.ci,c.p1,c.p2,c.em,c.pc,c.sd,c.fq,c.sty,c.rt,c.slp,c.sltgt,c.bor||'',c.pt,c.gal,c.su,c.cg,c.sp,c.ws,c.sk,c.re,c.md,c.wf,c.gc,c.gs,c.es,c.dg,c.df,c.op,c.rf,c.sn,c.no,c.pe,c.cn,c.gn,bookOf(c),emailOn(c)?'On':'Off']);
   const ws1=XLSX.utils.aoa_to_sheet([cHeaders,...cData]);
   // Set column widths
   ws1['!cols']=cHeaders.map(h=>({wch:Math.max(h.length+2,12)}));
