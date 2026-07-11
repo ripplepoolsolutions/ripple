@@ -289,7 +289,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 </div></div>
 
 <!-- VIEW CLIENT MODAL -->
-<div class="mo" id="mo-v"><div class="ml"><div class="mh"><span id="vn">Client</span><button class="mx" onclick="closeM('mo-v')">&times;</button></div><div id="vcon"></div><div style="display:flex;gap:8px;margin-top:14px;"><button class="btn bp" onclick="editFV()" style="flex:1">Edit</button><button class="btn bg" onclick="logFV()" style="flex:1">Log Visit</button></div></div></div>
+<div class="mo" id="mo-v"><div class="ml"><div class="mh"><span id="vn">Client</span><button class="mx" onclick="closeM('mo-v')">&times;</button></div><div id="vcon"></div><div style="display:flex;gap:8px;margin-top:14px;"><button class="btn bp" onclick="editFV()" style="flex:1">Edit</button><button class="btn bg" onclick="logFV()" style="flex:1">Log Visit</button></div><button class="btn bs" onclick="openPHR()" style="width:100%;margin-top:8px;">📊 Pool Health Report</button></div></div>
 
 <!-- REPORT MODAL -->
 <div class="mo" id="mo-r"><div class="ml"><div class="mh"><span>Visit Report</span><button class="mx" onclick="closeM('mo-r')">&times;</button></div><div id="rcon"></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;"><button class="btn bp" onclick="shareReport()" id="btn-share">📤 Share PDF Report</button><button class="btn bg" onclick="emailWithPDF()">📧 Email Report to Client</button><button class="btn bs" onclick="downloadPDF()">⬇️ Download PDF</button><div style="display:flex;gap:8px;"><button class="btn bs" onclick="copyRpt()" style="flex:1">Copy Text</button><button class="btn bs" onclick="markSent()" style="flex:1" id="btn-sent">✓ Mark as Sent</button></div></div></div></div>
@@ -398,6 +398,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="mo" id="mo-next"><div class="ml"><div class="mh"><span id="mo-next-title">Next Stop</span><button class="mx" onclick="closeM('mo-next')">&times;</button></div><div id="mo-next-body"></div></div></div>
 <div class="mo" id="mo-skip"><div class="ml"><div class="mh"><span>Skip Stop</span><button class="mx" onclick="closeM('mo-skip')">&times;</button></div><div id="mo-skip-body"></div></div></div>
 <div class="mo" id="mo-fin"><div class="ml"><div class="mh"><span>End of Week \u2014 Finalize</span><button class="mx" onclick="closeM('mo-fin')">&times;</button></div><div id="mo-fin-body"></div></div></div>
+<div class="mo" id="mo-phr"><div class="ml"><div class="mh"><span id="phr-title">Pool Health Report</span><button class="mx" onclick="closeM('mo-phr')">&times;</button></div><div class="fg"><label class="fl">Reporting Period</label><select class="fs" id="phr-period" onchange="phrPeriodChange()"></select></div><div id="phr-custom" style="display:none;gap:10px;margin-bottom:12px;"><div style="flex:1;"><label class="fl">From</label><input type="date" class="fi" id="phr-from" onchange="phrCustomChange()"></div><div style="flex:1;"><label class="fl">To</label><input type="date" class="fi" id="phr-to" onchange="phrCustomChange()"></div></div><div id="phr-con"></div><button class="btn bp" id="phr-email-btn" onclick="phrEmailMe()" style="display:none;margin-top:12px;">📧 Email Me a Review Copy</button></div></div>
 
 <nav class="bnav">
 <button class="ni act" onclick="nav('dash',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Home</button>
@@ -409,7 +410,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.6';
+const APP_VER='v7.7';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -3467,6 +3468,504 @@ function viewVisitDirect(idx){
   if(idx<0||idx>=DB.visits.length)return;
   detailVisitIdx=idx;
   showVisitDetail(DB.visits[idx]);
+}
+
+/* ═══════════ POOL HEALTH REPORT (v7.7, internal only) ═══════════ */
+// Per-pool, per-period health report. PURE READ LAYER: recomputes every water-balance
+// point live at generation time, writes nothing to any record, never mixes in stored
+// dlsi stamps, and has NO code path that emails anyone but Victor's own inbox.
+// calcDose, projAfter, carriedVals, doLSI, genRpt, buildEmailHTML are all untouched.
+
+// ── Tunable scoring constants (starting values; tune against real pools after first runs) ──
+const PHR_W_INBAND=0.60;      // weight: fraction of points inside the balanced band
+const PHR_W_STEADY=0.40;      // weight: steadiness (low visit-to-visit spread)
+const PHR_BAND=0.30;          // balanced band half-width (matches the app's -0.3..+0.3 zone)
+const PHR_STDEV_FLOOR=0.40;   // a spread (std dev) at or above this zeroes the steadiness component
+const PHR_TIER_EXCELLENT=85;  // tier cutoffs on the 0-100 score
+const PHR_TIER_STRONG=70;
+const PHR_TIER_STEADY=50;
+const PHR_MIN_VISITS=6;       // thin-history floor: real (non-skip) visits required inside the window
+const PHR_MIN_POINTS=3;       // thin-history floor: computable water-balance points required
+
+// As-of variant of carriedVals (v7.4.3): identical preference logic (departure-stamped
+// dch/dalk/dcya beat arrival readings, skips excluded, pH NEVER carried) but restricted
+// to real visits dated at or before asOfDt, excluding the target visit itself, so
+// historical reconstruction never feeds future data into past points. Report-only;
+// carriedVals itself is untouched and still serves the live visit screen.
+function carriedValsAsOf(cid,asOfDt,exVid){
+  const out={};
+  if(isNaN(cid))return out;
+  const vs=DB.visits.filter(v=>v.cid===cid&&!v.skip&&(v.dt||'')<=asOfDt&&v.vid!==exVid).sort((a,b)=>((b.dt||'').localeCompare(a.dt||''))||((b.mt||0)-(a.mt||0)));
+  const grab=fields=>{for(const v of vs){for(const f of fields){const x=parseFloat(v[f]);if(!isNaN(x)&&x>0)return{v:x,dt:v.dt};}}return null;};
+  const c1=grab(['dch','ch']);if(c1)out.ch=c1;
+  const a1=grab(['dalk','alk']);if(a1)out.alk=a1;
+  const t1=grab(['temp']);if(t1)out.temp=t1;
+  const y1=grab(['dcya','cya']);if(y1)out.cya=y1;
+  return out;
+}
+
+// Departure water-balance series for one client over a window. One code path for every
+// point (stored dlsi stamps are ignored on purpose: they predate the borate parameter
+// and older guard logic). Per point, input preference order:
+//   pH:   departure stamp, else fresh reading run through the projection. NEVER carried.
+//   Alk:  departure stamp, else fresh projected, else as-of carry.
+//   CH:   departure stamp, else fresh projected, else as-of carry.
+//   Temp: fresh reading, else as-of carry.
+//   CYA:  departure stamp, else fresh projected, else as-of carry, else 0.
+//   TDS:  fresh reading, else the doLSI default (1000).
+//   bor:  the client's current borate value, exactly like the v7.6 display sites.
+// A visit missing pH (or any of alk/CH/temp with no carry available) is an honest gap.
+function phrPoints(c,from,to){
+  const vs=DB.visits.filter(v=>v.cid===c.id&&!v.skip&&(v.dt||'')>=from&&(v.dt||'')<=to)
+    .sort((a,b)=>((a.dt||'').localeCompare(b.dt||''))||((a.mt||0)-(b.mt||0)));
+  const bor=parseFloat(c.bor)||0;
+  const pts=[];
+  vs.forEach(v=>{
+    const pr=projAfter(v,c);
+    const carried=[];
+    let ph=null;
+    const sdph=parseFloat(v.dph);
+    if(!isNaN(sdph)&&sdph>0)ph=sdph;
+    else if(parseFloat(v.ph)>0)ph=pr.dPH;
+    if(ph===null){pts.push({dt:v.dt,vid:v.vid,lsi:null,carried:null,gap:'ph'});return;}
+    const cv=carriedValsAsOf(c.id,v.dt,v.vid);
+    let alk=null;
+    const sdalk=parseFloat(v.dalk);
+    if(!isNaN(sdalk)&&sdalk>0)alk=sdalk;
+    else if(parseFloat(v.alk)>0)alk=pr.dALK;
+    else if(cv.alk){alk=cv.alk.v;carried.push('alk');}
+    let ch=null;
+    const sdch=parseFloat(v.dch);
+    if(!isNaN(sdch)&&sdch>0)ch=sdch;
+    else if(parseFloat(v.ch)>0)ch=pr.dCH;
+    else if(cv.ch){ch=cv.ch.v;carried.push('ch');}
+    let t=null;
+    if(parseFloat(v.temp)>0)t=parseFloat(v.temp);
+    else if(cv.temp){t=cv.temp.v;carried.push('temp');}
+    let cya=0;
+    const sdcya=parseFloat(v.dcya);
+    if(!isNaN(sdcya)&&sdcya>0)cya=sdcya;
+    else if(parseFloat(v.cya)>0)cya=pr.dCYA;
+    else if(cv.cya){cya=cv.cya.v;carried.push('cya');}
+    if(alk===null||ch===null||t===null){pts.push({dt:v.dt,vid:v.vid,lsi:null,carried:null,gap:alk===null?'alk':(ch===null?'ch':'temp')});return;}
+    const L=doLSI(t,ph,alk,ch,cya,parseFloat(v.tds),bor);
+    pts.push({dt:v.dt,vid:v.vid,lsi:L,carried:carried,gap:null});
+  });
+  return pts;
+}
+
+// Stability score: blend of time-in-balance and steadiness. Returns null when the
+// series is too thin to be honest about. Carried-calcium points count fully toward
+// the score; honesty lives in disclosure (the internal split line and hollow chart
+// dots), not a math penalty.
+function phrScore(pts){
+  const s=pts.filter(p=>p.lsi!==null&&!isNaN(p.lsi)).map(p=>p.lsi);
+  if(s.length<PHR_MIN_POINTS)return null;
+  const inBand=s.filter(x=>x>=-PHR_BAND&&x<=PHR_BAND).length/s.length;
+  const mean=s.reduce((a,b)=>a+b,0)/s.length;
+  const sd=Math.sqrt(s.reduce((a,b)=>a+(b-mean)*(b-mean),0)/s.length);
+  const steady=Math.max(0,1-sd/PHR_STDEV_FLOOR);
+  const score=Math.round(100*(PHR_W_INBAND*inBand+PHR_W_STEADY*steady));
+  const tier=score>=PHR_TIER_EXCELLENT?'Excellent':score>=PHR_TIER_STRONG?'Strong':score>=PHR_TIER_STEADY?'Steady':'Needs Attention';
+  return {score:score,tier:tier,inBand:inBand,sd:sd,mean:mean,n:s.length};
+}
+
+// ── Period helpers ──
+function phrQLabel(y,q){const R=[['Jan','Mar'],['Apr','Jun'],['Jul','Sep'],['Oct','Dec']];return 'Q'+q+' '+y+' ('+R[q-1][0]+'-'+R[q-1][1]+')';}
+function phrQRange(y,q){const sm=(q-1)*3+1;const em=sm+2;const last=new Date(y,em,0).getDate();return{from:y+'-'+String(sm).padStart(2,'0')+'-01',to:y+'-'+String(em).padStart(2,'0')+'-'+String(last).padStart(2,'0')};}
+function phrQuarters(cid){
+  const seen={};const out=[];
+  DB.visits.filter(v=>v.cid===cid&&!v.skip&&v.dt).forEach(v=>{
+    const y=+v.dt.slice(0,4),m=+v.dt.slice(5,7);
+    if(!y||!m)return;
+    const q=Math.floor((m-1)/3)+1;const k=y+'-'+q;
+    if(!seen[k]){seen[k]=1;out.push({y:y,q:q});}
+  });
+  out.sort((a,b)=>(b.y-a.y)||(b.q-a.q));
+  return out;
+}
+function phrDateFrac(dt,from,to){
+  const a=new Date(from).getTime(),b=new Date(to).getTime(),x=new Date(dt).getTime();
+  if(!(b>a))return 0.5;
+  return Math.max(0,Math.min(1,(x-a)/(b-a)));
+}
+
+// Per-parameter series for the trend charts. Value preference: departure stamp, else
+// fresh arrival reading (both count as measured, solid dot), else as-of carry (hollow
+// dot). pH is never carried, so a pH-less week is simply a gap on the pH chart.
+function phrParamSeries(c,from,to,key){
+  const dK={ph:'dph',alk:'dalk',ch:'dch',cya:'dcya'}[key];
+  const vs=DB.visits.filter(v=>v.cid===c.id&&!v.skip&&(v.dt||'')>=from&&(v.dt||'')<=to)
+    .sort((a,b)=>((a.dt||'').localeCompare(b.dt||''))||((a.mt||0)-(b.mt||0)));
+  const out=[];
+  vs.forEach(v=>{
+    let val=null,car=false;
+    const d=parseFloat(v[dK]);
+    if(!isNaN(d)&&d>0)val=d;
+    else{const f=parseFloat(v[key]);if(!isNaN(f)&&f>0)val=f;}
+    if(val===null&&key!=='ph'){
+      const cv=carriedValsAsOf(c.id,v.dt,v.vid);
+      if(cv[key]){val=cv[key].v;car=true;}
+    }
+    if(val!==null)out.push({dt:v.dt,v:val,carried:car});
+  });
+  return out;
+}
+
+// Service timeline: client-safe highlights only (filter service, notable treatments,
+// notes already written for the client). Skips and internal flags never appear.
+function phrTimeline(c,from,to){
+  const vs=DB.visits.filter(v=>v.cid===c.id&&!v.skip&&(v.dt||'')>=from&&(v.dt||'')<=to)
+    .sort((a,b)=>((a.dt||'').localeCompare(b.dt||'')));
+  const ev=[];
+  vs.forEach(v=>{
+    if(v.bw)ev.push({dt:v.dt,t:'Filter service (backwash / cartridge cleaned)'});
+    if(v.cacl)ev.push({dt:v.dt,t:'Calcium hardness adjustment'});
+    if(v.cyaa)ev.push({dt:v.dt,t:'Stabilizer added'});
+    if(v.salta)ev.push({dt:v.dt,t:'Salt added ('+v.salta+' lbs)'});
+    if(v.pr)ev.push({dt:v.dt,t:'Phosphate treatment'});
+    if(v.ntc)ev.push({dt:v.dt,t:String(v.ntc)});
+  });
+  return ev;
+}
+
+// Client-safe one-liner per parameter. Never mentions carried values or the index.
+function phrParamLine(label,ser,b){
+  if(!ser.length)return null;
+  const inb=ser.filter(p=>p.v>=b.lo&&p.v<=b.hi).length;
+  if(inb===ser.length)return label+' stayed in the ideal range all period.';
+  if(inb>=Math.ceil(ser.length*0.75))return label+' stayed in the ideal range for most of the period ('+inb+' of '+ser.length+' checks).';
+  return label+' was in the ideal range on '+inb+' of '+ser.length+' checks and was treated as needed.';
+}
+
+// ── SVG trend chart for the on-screen preview ──
+// noNums=true hides the value axis (used for the Water Balance chart so no raw index
+// number is ever rendered; dot position against the shaded zone is the established
+// client-safe vocabulary from the existing meter).
+function phrChartSVG(title,ser,b,from,to,noNums,dec){
+  const W=320,H=96,padL=noNums?8:30,padR=8,padT=18,padB=16;
+  const pw=W-padL-padR,phg=H-padT-padB;
+  const yOf=val=>padT+phg-((Math.max(b.min,Math.min(b.max,val))-b.min)/(b.max-b.min))*phg;
+  const xOf=dt=>padL+phrDateFrac(dt,from,to)*pw;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">';
+  s+='<text x="'+padL+'" y="12" font-size="10" font-weight="700" fill="#0B1D3A" font-family="DM Sans,sans-serif">'+title+'</text>';
+  s+='<rect x="'+padL+'" y="'+padT+'" width="'+pw+'" height="'+phg+'" fill="#f4f6f7" rx="3"/>';
+  const bandY=yOf(b.hi),bandH=Math.max(2,yOf(b.lo)-yOf(b.hi));
+  s+='<rect x="'+padL+'" y="'+bandY.toFixed(1)+'" width="'+pw+'" height="'+bandH.toFixed(1)+'" fill="rgba(6,186,181,0.28)" rx="2"/>';
+  if(noNums){
+    s+='<text x="'+(padL+4)+'" y="'+(bandY+bandH/2+3).toFixed(1)+'" font-size="7.5" fill="#029b96" font-family="DM Sans,sans-serif">Balanced zone</text>';
+  }else{
+    s+='<text x="'+(padL-4)+'" y="'+(yOf(b.hi)+3).toFixed(1)+'" font-size="7.5" fill="#999" text-anchor="end" font-family="DM Sans,sans-serif">'+(dec?b.hi.toFixed(dec):b.hi)+'</text>';
+    s+='<text x="'+(padL-4)+'" y="'+(yOf(b.lo)+3).toFixed(1)+'" font-size="7.5" fill="#999" text-anchor="end" font-family="DM Sans,sans-serif">'+(dec?b.lo.toFixed(dec):b.lo)+'</text>';
+  }
+  ser.forEach(p=>{
+    const x=xOf(p.dt).toFixed(1),y=yOf(p.v).toFixed(1);
+    if(p.carried)s+='<circle cx="'+x+'" cy="'+y+'" r="3.4" fill="white" stroke="#888" stroke-width="1.4"/>';
+    else s+='<circle cx="'+x+'" cy="'+y+'" r="3.4" fill="#0B1D3A"/>';
+  });
+  s+='<text x="'+padL+'" y="'+(H-4)+'" font-size="7.5" fill="#999" font-family="DM Sans,sans-serif">'+lsiFmtDate(from)+'</text>';
+  s+='<text x="'+(W-padR)+'" y="'+(H-4)+'" font-size="7.5" fill="#999" text-anchor="end" font-family="DM Sans,sans-serif">'+lsiFmtDate(to)+'</text>';
+  s+='</svg>';
+  return s;
+}
+
+// Water Balance meter (HTML): tier position shown as the window's average balance
+// against the shaded zone. No numbers, same trick as the existing PDF meter.
+function phrMeterHTML(mean){
+  const pos=(((Math.max(-1,Math.min(1,mean))+1)/2)*100).toFixed(1);
+  return '<div style="position:relative;height:10px;background:var(--g100);border-radius:5px;margin:10px 0 3px;">'
+    +'<div style="position:absolute;left:35%;width:30%;top:0;bottom:0;background:rgba(6,186,181,0.35);border-radius:5px;"></div>'
+    +'<div style="position:absolute;left:'+pos+'%;top:50%;width:12px;height:12px;background:var(--navy);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>'
+    +'</div><div style="font-size:9px;color:var(--g400);text-align:center;">Balanced zone</div>';
+}
+
+// ── Modal flow ──
+let _phrLast=null;
+function openPHR(){
+  const c=DB.clients.find(x=>x.id===vid);if(!c)return;
+  closeM('mo-v');
+  window._phrCid=c.id;
+  _phrLast=null;
+  const qs=phrQuarters(c.id);
+  const sel=document.getElementById('phr-period');
+  sel.innerHTML=qs.map(x=>'<option value="q:'+x.y+':'+x.q+'">'+phrQLabel(x.y,x.q)+'</option>').join('')+'<option value="custom">Custom range</option>';
+  sel.selectedIndex=0;
+  document.getElementById('phr-custom').style.display='none';
+  document.getElementById('phr-from').value='';
+  document.getElementById('phr-to').value='';
+  document.getElementById('phr-title').textContent='Pool Health Report';
+  if(qs.length){phrRun();}
+  else{
+    sel.value='custom';
+    document.getElementById('phr-custom').style.display='flex';
+    document.getElementById('phr-con').innerHTML='<div class="emp">No visit history for this pool yet. The report unlocks as visits accumulate.</div>';
+    document.getElementById('phr-email-btn').style.display='none';
+  }
+  openM('mo-phr');
+}
+function phrPeriodChange(){
+  const v=document.getElementById('phr-period').value;
+  const cu=document.getElementById('phr-custom');
+  if(v==='custom'){
+    cu.style.display='flex';
+    document.getElementById('phr-con').innerHTML='<div class="emp">Pick a From and To date above.</div>';
+    document.getElementById('phr-email-btn').style.display='none';
+    _phrLast=null;
+    return;
+  }
+  cu.style.display='none';
+  phrRun();
+}
+function phrCustomChange(){
+  const f=document.getElementById('phr-from').value,t=document.getElementById('phr-to').value;
+  if(f&&t&&f<=t)phrRun(f,t,lsiFmtDate(f)+' to '+lsiFmtDate(t)+' '+t.slice(0,4));
+}
+
+// Assemble everything for the chosen window and render the on-screen preview.
+// The preview is the only place the internal stability number and the measured/carried
+// split appear; the PDF and email builders never receive that text.
+function phrRun(from,to,label){
+  const c=DB.clients.find(x=>x.id===window._phrCid);if(!c)return;
+  if(!from){
+    const v=document.getElementById('phr-period').value;
+    if(!v||v==='custom')return;
+    const p=v.split(':');
+    const r=phrQRange(+p[1],+p[2]);
+    from=r.from;to=r.to;label=phrQLabel(+p[1],+p[2]);
+  }
+  const con=document.getElementById('phr-con');
+  const eb=document.getElementById('phr-email-btn');
+  const realVisits=DB.visits.filter(v=>v.cid===c.id&&!v.skip&&(v.dt||'')>=from&&(v.dt||'')<=to);
+  // CH anchor: at least one real calcium measurement dated at or before the window END.
+  // A CH tested after the window cannot anchor anything inside it under the as-of rule.
+  const chAnchor=DB.visits.some(v=>v.cid===c.id&&!v.skip&&(v.dt||'')<=to&&(parseFloat(v.ch)>0||parseFloat(v.dch)>0));
+  const pts=phrPoints(c,from,to);
+  const score=phrScore(pts);
+  document.getElementById('phr-title').textContent='Pool Health Report: '+c.ln+', '+c.fn;
+  if(realVisits.length<PHR_MIN_VISITS||!chAnchor||!score){
+    let why=[];
+    if(realVisits.length<PHR_MIN_VISITS)why.push(realVisits.length+' of '+PHR_MIN_VISITS+' visits needed in this period');
+    if(!chAnchor)why.push('no calcium hardness test on record yet');
+    if(score===null&&realVisits.length>=PHR_MIN_VISITS&&chAnchor)why.push('fewer than '+PHR_MIN_POINTS+' computable water balance points');
+    con.innerHTML='<div class="cd" style="text-align:center;"><div style="font-size:28px;margin-bottom:8px;">🌱</div><div style="font-weight:600;color:var(--navy);margin-bottom:6px;">Still building this pool\'s history</div><div style="font-size:12px;color:var(--g600);line-height:1.7;">'+label+'<br>'+why.join('<br>')+'</div></div>';
+    eb.style.display='none';
+    _phrLast=null;
+    return;
+  }
+  const bands=chemBands({},c);
+  const sers={ph:phrParamSeries(c,from,to,'ph'),alk:phrParamSeries(c,from,to,'alk'),ch:phrParamSeries(c,from,to,'ch'),cya:phrParamSeries(c,from,to,'cya')};
+  const timeline=phrTimeline(c,from,to);
+  const nPts=score.n;
+  const carCH=pts.filter(p=>p.carried&&p.carried.includes('ch')).length;
+  const carAlk=pts.filter(p=>p.carried&&p.carried.includes('alk')).length;
+  const carTemp=pts.filter(p=>p.carried&&p.carried.includes('temp')).length;
+  const carCya=pts.filter(p=>p.carried&&p.carried.includes('cya')).length;
+  const lines=[phrParamLine('pH',sers.ph,bands.ph),phrParamLine('Alkalinity',sers.alk,bands.alk),phrParamLine('Calcium hardness',sers.ch,bands.ch),phrParamLine('Stabilizer',sers.cya,bands.cya)].filter(Boolean);
+  _phrLast={c:c,from:from,to:to,label:label,pts:pts,score:score,bands:bands,sers:sers,timeline:timeline,lines:lines};
+  const wbSer=pts.filter(p=>p.lsi!==null).map(p=>({dt:p.dt,v:p.lsi,carried:p.carried&&p.carried.length>0}));
+  const wbBand={min:-1,max:1,lo:-PHR_BAND,hi:PHR_BAND};
+  const tierCol=score.tier==='Needs Attention'?'var(--gold)':'var(--grn)';
+  let carBits=[];
+  if(carCH)carBits.push(carCH+' of '+nPts+' points used carried calcium');
+  if(carAlk)carBits.push(carAlk+' carried alkalinity');
+  if(carTemp)carBits.push(carTemp+' carried temp');
+  if(carCya)carBits.push(carCya+' carried CYA');
+  let h='<div class="cd">'
+    +'<div style="font-size:10px;font-weight:700;color:var(--g400);text-transform:uppercase;letter-spacing:0.5px;">Water Balance Stability · '+label+'</div>'
+    +'<div style="text-align:center;margin-top:10px;"><span style="display:inline-block;background:'+tierCol+';color:white;font-weight:700;font-size:15px;padding:6px 22px;border-radius:20px;">'+score.tier+'</span></div>'
+    +phrMeterHTML(score.mean)
+    +'<div style="font-size:12px;color:var(--g600);margin-top:10px;text-align:center;">Water balance was in the balanced zone on '+Math.round(score.inBand*nPts)+' of '+nPts+' visits this period.</div>'
+    +'<div style="font-size:10px;color:var(--g400);background:var(--g50);border:1px dashed var(--g200);border-radius:8px;padding:6px 10px;margin-top:10px;">INTERNAL · Stability '+score.score+' · spread '+score.sd.toFixed(2)+(carBits.length?' · '+carBits.join(' · '):' · all points fully measured')+'</div>'
+    +'</div>';
+  h+='<div class="cd"><div class="ch">Water Balance Trend</div>'+phrChartSVG('Water Balance',wbSer,wbBand,from,to,true,0)
+    +'<div style="font-size:9px;color:var(--g400);margin-top:6px;">● Measured &nbsp;&nbsp; ○ Estimated from a recent test</div></div>';
+  h+='<div class="cd"><div class="ch">Chemistry Trends</div>'
+    +phrChartSVG('pH',sers.ph,bands.ph,from,to,false,1)
+    +'<div style="height:8px;"></div>'+phrChartSVG('Alkalinity (ppm)',sers.alk,bands.alk,from,to,false,0)
+    +'<div style="height:8px;"></div>'+phrChartSVG('Calcium Hardness (ppm)',sers.ch,bands.ch,from,to,false,0)
+    +'<div style="height:8px;"></div>'+phrChartSVG('Stabilizer (ppm)',sers.cya,bands.cya,from,to,false,0)
+    +'</div>';
+  if(lines.length)h+='<div class="cd"><div class="ch">This Period</div><div style="font-size:13px;line-height:1.9;color:var(--g800);">'+lines.map(l=>'• '+l).join('<br>')+'</div></div>';
+  if(timeline.length)h+='<div class="cd"><div class="ch">Service Timeline</div><div style="font-size:12px;line-height:1.9;color:var(--g800);">'+timeline.map(e=>'<strong>'+lsiFmtDate(e.dt)+'</strong> · '+e.t).join('<br>')+'</div></div>';
+  con.innerHTML=h;
+  eb.style.display='';
+}
+
+// ── PDF generator: NEW function, sibling of generatePDF, never touches it ──
+// Client-ready by construction: tier word and meter only, no raw index numbers,
+// no internal stability number, no carried-split text. Hollow dots read as
+// "Estimated from a recent test".
+async function generatePHRPDF(R){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'letter'});
+  const pw=doc.internal.pageSize.getWidth();
+  const pgh=doc.internal.pageSize.getHeight();
+  const margin=15,cw=pw-margin*2;
+  let y=margin;
+  const navy=[11,29,58],gold=[235,119,79],teal=[6,186,181],tealLt=[190,238,236],gray=[153,153,153],grayDk=[51,51,51],grayLt=[232,232,232];
+  function checkPage(n){if(y+n>pgh-20){doc.addPage();y=margin+2;return true;}return false;}
+  // Header: teal band, navy text, coral rule (brand)
+  doc.setFillColor(...teal);doc.rect(0,0,pw,30,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(...navy);
+  doc.text('Ripple Pool Solutions LLC',pw/2,13,{align:'center'});
+  doc.setFont('helvetica','italic');doc.setFontSize(10);
+  doc.text('Luxury in Every Ripple',pw/2,21,{align:'center'});
+  doc.setDrawColor(...gold);doc.setLineWidth(1.2);doc.line(0,30.6,pw,30.6);
+  y=41;
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(...navy);
+  doc.text('Pool Health Report - '+R.label,margin,y);
+  doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(...grayDk);
+  doc.text(R.c.fn+' '+R.c.ln,margin,y+7);
+  doc.setFontSize(10);doc.setTextColor(...gray);
+  doc.text(R.c.ad+', '+R.c.ci,margin,y+12);
+  // Status block, top right: tier badge + balance meter
+  const sbX=pw-margin-66,sbY=36,sbW=66,sbH=28;
+  doc.setFillColor(247,249,250);doc.roundedRect(sbX,sbY,sbW,sbH,2,2,'F');
+  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...gray);
+  doc.text('WATER BALANCE STABILITY',sbX+sbW/2,sbY+5,{align:'center'});
+  const tierCol=R.score.tier==='Needs Attention'?gold:[39,174,96];
+  const bW=46,bH=8;
+  doc.setFillColor(...tierCol);
+  doc.roundedRect(sbX+sbW/2-bW/2,sbY+7,bW,bH,3,3,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(R.score.tier.length>8?8:10);doc.setTextColor(255,255,255);
+  doc.text(R.score.tier,sbX+sbW/2,sbY+12.4,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...gray);
+  doc.text('Water Balance',sbX+sbW/2,sbY+19.6,{align:'center'});
+  const mX=sbX+8,mW=sbW-16,mY=sbY+21.6;
+  doc.setFillColor(...grayLt);doc.roundedRect(mX,mY,mW,2.4,1.2,1.2,'F');
+  doc.setFillColor(...teal);doc.roundedRect(mX+0.35*mW,mY,0.30*mW,2.4,1.2,1.2,'F');
+  const lv=Math.max(-1,Math.min(1,R.score.mean));
+  doc.setFillColor(...navy);doc.circle(mX+((lv+1)/2)*mW,mY+1.2,1.5,'F');
+  y=Math.max(y+18,sbY+sbH+8);
+  // Chart drawing helper (shared vocabulary: gray frame, teal-light ideal band,
+  // solid navy measured dots, hollow carried dots)
+  function drawSeries(title,ser,b,h,noNums,dec){
+    checkPage(h+12);
+    doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(...navy);
+    doc.text(title,margin,y);
+    y+=2.5;
+    const px=margin+(noNums?0:12),pwid=cw-(noNums?0:12);
+    doc.setFillColor(246,248,249);doc.roundedRect(px,y,pwid,h,1.5,1.5,'F');
+    const yOf=val=>y+h-((Math.max(b.min,Math.min(b.max,val))-b.min)/(b.max-b.min))*h;
+    const bandTop=yOf(b.hi),bandBot=yOf(b.lo);
+    doc.setFillColor(...tealLt);doc.rect(px,bandTop,pwid,Math.max(1.5,bandBot-bandTop),'F');
+    if(noNums){
+      doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(2,155,150);
+      doc.text('Balanced zone',px+2,bandTop+(bandBot-bandTop)/2+1);
+    }else{
+      doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...gray);
+      doc.text(String(dec?b.hi.toFixed(dec):b.hi),px-2,bandTop+1,{align:'right'});
+      doc.text(String(dec?b.lo.toFixed(dec):b.lo),px-2,bandBot+1,{align:'right'});
+    }
+    ser.forEach(p=>{
+      const x=px+2+phrDateFrac(p.dt,R.from,R.to)*(pwid-4);
+      const yy=yOf(p.v);
+      if(p.carried){doc.setFillColor(255,255,255);doc.setDrawColor(130,130,130);doc.setLineWidth(0.4);doc.circle(x,yy,1.4,'FD');}
+      else{doc.setFillColor(...navy);doc.circle(x,yy,1.4,'F');}
+    });
+    doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...gray);
+    doc.text(lsiFmtDate(R.from),px,y+h+3.5);
+    doc.text(lsiFmtDate(R.to),px+pwid,y+h+3.5,{align:'right'});
+    y+=h+8;
+  }
+  const wbSer=R.pts.filter(p=>p.lsi!==null).map(p=>({dt:p.dt,v:p.lsi,carried:p.carried&&p.carried.length>0}));
+  drawSeries('Water Balance Trend',wbSer,{min:-1,max:1,lo:-PHR_BAND,hi:PHR_BAND},26,true,0);
+  // Legend
+  checkPage(6);
+  let lx=margin;
+  doc.setFillColor(...navy);doc.circle(lx+1.4,y-1,1.4,'F');
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...gray);
+  doc.text('Measured',lx+4.5,y);
+  lx+=28;
+  doc.setFillColor(255,255,255);doc.setDrawColor(130,130,130);doc.setLineWidth(0.4);doc.circle(lx+1.4,y-1,1.4,'FD');
+  doc.text('Estimated from a recent test',lx+4.5,y);
+  y+=7;
+  drawSeries('pH',R.sers.ph,R.bands.ph,20,false,1);
+  drawSeries('Alkalinity (ppm)',R.sers.alk,R.bands.alk,20,false,0);
+  drawSeries('Calcium Hardness (ppm)',R.sers.ch,R.bands.ch,20,false,0);
+  drawSeries('Stabilizer (ppm)',R.sers.cya,R.bands.cya,20,false,0);
+  // This Period summary
+  if(R.lines.length){
+    checkPage(12+R.lines.length*5);
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...navy);
+    doc.text('This Period',margin,y);y+=6;
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...grayDk);
+    R.lines.forEach(l=>{checkPage(5);const wr=doc.splitTextToSize('\u2022  '+l,cw);doc.text(wr,margin,y);y+=wr.length*4.6;});
+    y+=3;
+  }
+  // Service timeline
+  if(R.timeline.length){
+    checkPage(12);
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...navy);
+    doc.text('Service Timeline',margin,y);y+=6;
+    doc.setFont('helvetica','normal');doc.setFontSize(9);
+    R.timeline.forEach(e=>{
+      checkPage(5);
+      doc.setTextColor(...grayDk);doc.setFont('helvetica','bold');
+      doc.text(lsiFmtDate(e.dt),margin,y);
+      doc.setFont('helvetica','normal');doc.setTextColor(...gray);
+      const wr=doc.splitTextToSize(e.t,cw-24);
+      doc.text(wr,margin+22,y);
+      y+=Math.max(1,wr.length)*4.6;
+    });
+    y+=3;
+  }
+  // Footer
+  checkPage(10);
+  doc.setDrawColor(...grayLt);doc.setLineWidth(0.4);doc.line(margin,y,pw-margin,y);
+  doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(...gray);
+  doc.text('Prepared by Ripple Pool Solutions LLC · Luxury in Every Ripple',pw/2,y+5,{align:'center'});
+  return doc;
+}
+
+// ── Email HTML: NEW builder, sibling of buildEmailHTML, never touches it ──
+// Clean, client-ready, forward-ready: tier + plain-language summary, full charts in
+// the attached PDF. No internal number, no raw index, no carried-split text.
+function buildPHREmailHTML(R){
+  const tierBg=R.score.tier==='Needs Attention'?'#eb774f':'#27AE60';
+  const inN=Math.round(R.score.inBand*R.score.n);
+  return '<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;">'
+    +'<div style="background:#06bab5;padding:24px 20px;text-align:center;border-bottom:3px solid #eb774f;">'
+    +'<div style="font-size:22px;font-weight:bold;color:#0B1D3A;">Ripple Pool Solutions LLC</div>'
+    +'<div style="font-size:12px;font-style:italic;color:#0B1D3A;margin-top:4px;">Luxury in Every Ripple</div>'
+    +'</div>'
+    +'<div style="padding:24px 20px;color:#333333;font-size:14px;line-height:1.7;">'
+    +'<p style="margin:0 0 14px;">Hi '+R.c.fn+',</p>'
+    +'<p style="margin:0 0 14px;">Here is your Pool Health Report for '+R.label+'. It looks back across the whole period, not just one visit, so you can see how your water has been doing over time.</p>'
+    +'<div style="text-align:center;margin:18px 0;">'
+    +'<div style="font-size:11px;color:#999999;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Water Balance Stability</div>'
+    +'<span style="display:inline-block;background:'+tierBg+';color:#ffffff;font-weight:bold;font-size:16px;padding:8px 28px;border-radius:22px;">'+R.score.tier+'</span>'
+    +'</div>'
+    +'<p style="margin:0 0 14px;">Your water balance sat in the balanced zone on '+inN+' of '+R.score.n+' visits this period.</p>'
+    +(R.lines.length?'<div style="background:#f7f9fa;border-radius:10px;padding:14px 16px;margin:0 0 14px;font-size:13px;line-height:1.9;">'+R.lines.map(l=>'&bull; '+l).join('<br>')+'</div>':'')
+    +'<p style="margin:0 0 14px;">Your full report is attached, with visit-by-visit trend charts and this period\'s service timeline.</p>'
+    +'<p style="margin:0 0 4px;">Enjoy your pool. We\'ll see you next week.</p>'
+    +'<p style="margin:14px 0 0;font-weight:bold;color:#0B1D3A;">Ripple Pool Solutions</p>'
+    +'</div>'
+    +'<div style="background:#f4f6f7;padding:14px 20px;text-align:center;font-size:11px;color:#999999;">Ripple Pool Solutions LLC · Port St. Lucie, FL · ripplepoolsolutions@gmail.com</div>'
+    +'</div>';
+}
+
+// ── The review gate: recipient HARDWIRED to Victor's own inbox ──
+// Structural safety property: there is no code path that sends a Pool Health Report
+// to any other address. The recipient is not a variable. Client delivery, if it ever
+// happens, is a manual Gmail forward by Victor, entirely outside the app. No sent
+// flag is written and no record is touched.
+async function phrEmailMe(){
+  if(!_phrLast){toast('Generate a report first');return;}
+  if(!syncReady()){toast('⚠️ Sync is not set up on this device, cannot send');return;}
+  if(!navigator.onLine){toast('⚠️ Offline, try again when connected');return;}
+  const R=_phrLast;
+  toast('Building your review copy...');
+  try{
+    const doc=await generatePHRPDF(R);
+    const pdf64=doc.output('datauristring').split(',')[1];
+    const fileName='Ripple_PoolHealth_'+R.c.ln+'_'+R.c.fn+'_'+R.to+'.pdf';
+    await apiCall({action:'mail',to:'ripplepoolsolutions@gmail.com',subject:'Pool Health Report - '+R.c.fn+' '+R.c.ln+' - '+R.label,html:buildPHREmailHTML(R),pdf:pdf64,fileName:fileName});
+    toast('✓ Review copy sent to ripplepoolsolutions@gmail.com');
+  }catch(e){
+    toast('⚠️ Send failed ('+(e.message||e)+')');
+  }
 }
 
 /* ═══════════ BACKUP / EXPORT ═══════════ */
