@@ -146,7 +146,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="toast" id="toast"></div>
 
 <!-- DASHBOARD -->
-<div class="pg act" id="pg-dash"><div id="draft-card"></div><div id="flow-card"></div><div id="truck-card"></div><div class="sg" id="ds"></div><div id="summer-badge-wrap" style="margin-bottom:10px;"></div><div id="unsent-section"></div><div class="cd" style="padding:12px 16px;"><div class="ch" style="margin-bottom:8px;">Data Management</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span id="storage-lbl" style="font-size:11px;color:var(--g400);">Storage: calculating...</span><span id="storage-visit-count" style="font-size:11px;color:var(--g400);"></span></div><div style="background:var(--g100);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;"><div id="storage-bar" style="height:100%;border-radius:4px;background:var(--teal);width:0%;transition:width 0.5s;"></div></div><div style="display:flex;gap:8px;margin-bottom:8px;"><button onclick="dlBackup()" style="flex:1;border:1px solid var(--teal);background:none;color:var(--teal);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💾 Back Up</button><button onclick="showPurgeMo()" style="flex:1;border:1px solid var(--gold);background:none;color:var(--gold);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Trim Old Visits</button></div><div style="display:flex;gap:8px;"><button onclick="showClearPhotos()" style="flex:1;border:1px solid var(--red);background:none;color:var(--red);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🧹 Clear All Photos</button></div><div style="display:flex;gap:8px;margin-top:8px;align-items:stretch;"><button onclick="syncNow(false)" style="flex:1;border:none;background:var(--navy);color:white;border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Sync Now</button><button onclick="openSyncSetup()" style="width:46px;border:1px solid var(--g200);background:none;color:var(--g600);border-radius:8px;padding:9px;font-size:14px;cursor:pointer;">⚙️</button></div><div id="sync-status" style="font-size:11px;color:var(--g400);margin-top:6px;text-align:center;">Sync not set up — tap ⚙️</div></div><div class="cd"><div class="ch">Today's Route</div><div id="dr"></div></div><div class="cd"><div class="ch">Recent Visits</div><div id="dv"></div></div></div>
+<div class="pg act" id="pg-dash"><div id="draft-card"></div><div id="flow-card"></div><div id="truck-card"></div><div id="ppp-card"></div><div class="sg" id="ds"></div><div id="summer-badge-wrap" style="margin-bottom:10px;"></div><div id="unsent-section"></div><div class="cd" style="padding:12px 16px;"><div class="ch" style="margin-bottom:8px;">Data Management</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span id="storage-lbl" style="font-size:11px;color:var(--g400);">Storage: calculating...</span><span id="storage-visit-count" style="font-size:11px;color:var(--g400);"></span></div><div style="background:var(--g100);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;"><div id="storage-bar" style="height:100%;border-radius:4px;background:var(--teal);width:0%;transition:width 0.5s;"></div></div><div style="display:flex;gap:8px;margin-bottom:8px;"><button onclick="dlBackup()" style="flex:1;border:1px solid var(--teal);background:none;color:var(--teal);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💾 Back Up</button><button onclick="showPurgeMo()" style="flex:1;border:1px solid var(--gold);background:none;color:var(--gold);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Trim Old Visits</button></div><div style="display:flex;gap:8px;"><button onclick="showClearPhotos()" style="flex:1;border:1px solid var(--red);background:none;color:var(--red);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🧹 Clear All Photos</button></div><div style="display:flex;gap:8px;margin-top:8px;align-items:stretch;"><button onclick="syncNow(false)" style="flex:1;border:none;background:var(--navy);color:white;border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Sync Now</button><button onclick="openSyncSetup()" style="width:46px;border:1px solid var(--g200);background:none;color:var(--g600);border-radius:8px;padding:9px;font-size:14px;cursor:pointer;">⚙️</button></div><div id="sync-status" style="font-size:11px;color:var(--g400);margin-top:6px;text-align:center;">Sync not set up — tap ⚙️</div></div><div class="cd"><div class="ch">Today's Route</div><div id="dr"></div></div><div class="cd"><div class="ch">Recent Visits</div><div id="dv"></div></div></div>
 
 <!-- CLIENTS -->
 <div class="pg" id="pg-cli"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h2 style="font-family:'Playfair Display',serif;color:var(--navy);font-size:20px;">Clients</h2><button class="btn bp bsm" onclick="openAdd()">+ Add</button></div><input type="text" class="fi" placeholder="Search..." id="csrch" oninput="rCli()" style="margin-bottom:12px;"><select class="fs" id="cbkf" onchange="rCli()" style="margin-bottom:12px;display:none;"></select><div id="clist"></div></div>
@@ -400,6 +400,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="mo" id="mo-fin"><div class="ml"><div class="mh"><span>End of Week \u2014 Finalize</span><button class="mx" onclick="closeM('mo-fin')">&times;</button></div><div id="mo-fin-body"></div></div></div>
 <div class="mo" id="mo-phr"><div class="ml"><div class="mh"><span id="phr-title">Pool Health Report</span><button class="mx" onclick="closeM('mo-phr')">&times;</button></div><div class="fg"><label class="fl">Reporting Period</label><select class="fs" id="phr-period" onchange="phrPeriodChange()"></select></div><div id="phr-custom" style="display:none;gap:10px;margin-bottom:12px;"><div style="flex:1;"><label class="fl">From</label><input type="date" class="fi" id="phr-from" onchange="phrCustomChange()"></div><div style="flex:1;"><label class="fl">To</label><input type="date" class="fi" id="phr-to" onchange="phrCustomChange()"></div></div><div id="phr-con"></div><button class="btn bp" id="phr-email-btn" onclick="phrEmailMe()" style="display:none;margin-top:12px;">📧 Email Me a Review Copy</button></div></div>
 <div class="mo" id="mo-truck"><div class="ml"><div class="mh"><span>🚚 Truck Load</span><button class="mx" onclick="closeM('mo-truck')">&times;</button></div><div id="truck-con"></div></div></div>
+<div class="mo" id="mo-ppp"><div class="ml"><div class="mh"><span>💰 Profit per Pool</span><button class="mx" onclick="closeM('mo-ppp')">&times;</button></div><div id="ppp-con"></div></div></div>
 
 <nav class="bnav">
 <button class="ni act" onclick="nav('dash',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Home</button>
@@ -411,7 +412,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.8';
+const APP_VER='v7.9';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -1465,6 +1466,7 @@ function rDash(){
   const _fl=flowGet();const rc=ac.filter(c=>c.sd===dn).sort((a,b)=>(a.ro||999)-(b.ro||999)||a.ln.localeCompare(b.ln));
   document.getElementById('dr').innerHTML=rc.length===0?`<div class="emp">No stops for ${dn}</div>`:rc.map((c,i)=>{const d=weekVisited(c.id);const _cb=!d&&_fl.cb.includes(c.id);const _df=!d&&_fl.defer.includes(c.id);return`<div class="rs" onclick="viewC(${c.id})"><div class="rn2" style="${d?'background:var(--grn);color:white;':_cb?'background:var(--yel);color:white;':_df?'background:var(--g200);color:var(--g600);':''}">${d?'✓':_cb?'↩':_df?'→':i+1}</div><div style="flex:1"><div style="font-weight:600;color:var(--navy);font-size:14px;">${c.ln}, ${c.fn}${_cb?' <span style="font-size:9px;color:var(--yel);font-weight:800;letter-spacing:0.5px;">↩ CIRCLE BACK</span>':''}${_df?' <span style="font-size:9px;color:var(--g400);font-weight:800;letter-spacing:0.5px;">→ TOMORROW</span>':''}</div><div style="font-size:11px;color:var(--g400);margin-top:2px;"><span onclick="event.stopPropagation();openMaps('${c.ad}','${c.ci||''}',${c.id});" style="color:var(--teal);text-decoration:underline;cursor:pointer;">${c.ad}</span> · Gate: ${c.gc||'N/A'}${c.dg?' · 🐕 '+c.dg:''}</div></div></div>`;}).join('');
   try{renderFlowCard();}catch(e){}
+  try{renderPPPCard();}catch(e){}
   const todayVisits=DB.visits.filter(v=>v.dt===td).sort((a,b)=>b.tm?.localeCompare(a.tm||'')||0);
   const rv=todayVisits.length>0?todayVisits:[...DB.visits].sort((a,b)=>b.dt.localeCompare(a.dt)).slice(0,5);
   document.getElementById('dv').innerHTML=rv.length===0?'<div class="emp">No visits yet</div>':rv.map(v=>{const c=DB.clients.find(x=>x.id===v.cid);const n=c?c.ln+', '+c.fn:'?';const l=lc(v.lsi);const idx=DB.visits.indexOf(v);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--g100);cursor:pointer;" onclick="viewVisitDirect(${idx})"><div><div style="font-weight:600;font-size:13px;">${n}</div><div style="font-size:11px;color:var(--g400);">${v.dt}${v.sent?' ✓':''}</div></div>${v.skip?'<span style="font-size:10px;font-weight:700;color:var(--g600);background:var(--g100);padding:3px 8px;border-radius:20px;">\u23ed Skipped</span>':(v.lsi!==null?`<span class="lb ${l}" style="font-size:12px;">LSI ${v.lsi.toFixed(2)}</span>`:'')}</div>`;}).join('');
@@ -4402,6 +4404,224 @@ function truckKickLine(){
   }catch(e){return '';}
 }
 try{renderTruckCard();}catch(e){}
+
+/* ═══════════ v7.9 PROFIT PER POOL (PPP) ═══════════
+   Internal-only, PURE READ ledger: revenue that reaches Victor, chemical cost, time, and
+   gross margin per Active pool, ranked worst margin first, with a per-book rollup and a
+   raise-candidates list. Machine A class: writes NOTHING to the DB. The only persisted
+   state is the chemical price list in ripple_ppp_v1 (per device, re-enterable, outside
+   the DB, the ripple_truck_v1 pattern). calcDose is never called or duplicated: the
+   ledger costs real logged doses only. Every value in this block is INTERNAL; none may
+   reach any client-facing builder. Honest gaps over invented numbers throughout. */
+const PPP_KEY='ripple_ppp_v1';
+const PPP_OASIS_SHARE=0.65;     /* Victor's receipt fraction on Oasis-book pools; first thing to tune */
+const PPP_WINDOW=13;            /* real visits averaged per pool, about a trailing quarter */
+const PPP_MARGIN_AMBER=0.40;    /* amber raise-candidate flag below this gross margin */
+const PPP_DAYS_PER_MONTH=30.44; /* 365.25/12, for the derived visits-per-month */
+const PPP_NUDGE_MIN_MINUTES=10; /* duration-sanity nudge fast-follow only; unused in v7.9 */
+const PPP_CHEMS=[
+  {field:'cla',label:'Liquid Chlorine',unit:'gal',packDefault:2.5,packWord:'jug'},
+  {field:'acid',label:'Muriatic Acid',unit:'gal',packDefault:1,packWord:'jug'},
+  {field:'bic',label:'Bicarb',unit:'lb',packDefault:1,packWord:'lb'},
+  {field:'cyaa',label:'Stabilizer (CYA)',unit:'lb',packDefault:1,packWord:'lb'},
+  {field:'cacl',label:'Calcium Chloride',unit:'lb',packDefault:1,packWord:'lb'},
+  {field:'salta',label:'Salt',unit:'lb',packDefault:40,packWord:'bag'},
+  {field:'pr',label:'Phosphate Remover',unit:'oz',packDefault:null,packWord:'bottle'}
+];
+function pppGet(){try{const s=JSON.parse(localStorage.getItem(PPP_KEY));if(s&&s.prices)return s;}catch(e){}return{prices:{}};}
+function pppSave(s){try{localStorage.setItem(PPP_KEY,JSON.stringify(s));}catch(e){}}
+/* Per-dose-unit price = package price / package size, in the unit the chemical is dosed
+   in, so there is never a cross-unit conversion. Null until BOTH are positive. */
+function pppPrice(field){const p=pppGet().prices[field];if(!p)return null;const pr=parseFloat(p.price),pk=parseFloat(p.pack);return(pr>0&&pk>0)?pr/pk:null;}
+/* Window per pool: mirror of tlfPoolAvg. Skips excluded, newest PPP_WINDOW real visits. */
+function pppWin(cid){return [...DB.visits].filter(v=>v.cid===cid&&!v.skip).sort((a,b)=>String(b.dt||'').localeCompare(String(a.dt||''))).slice(0,PPP_WINDOW);}
+function pppChemAvgDose(win,field){if(!win.length)return 0;let s=0;win.forEach(v=>{s+=(parseFloat(v[field])||0);});return s/win.length;}
+/* Average chemical cost per visit over the window. INCOMPLETE RULE (honest, least
+   blocking): a chemical the pool actually doses (avg dose > 0) with no price set blocks
+   the pool and is named; a chemical the pool never doses cannot block it, priced or not.
+   A visit with no doses contributes 0, which is correct. */
+function pppCostPerVisit(win){
+  const missing=[];
+  PPP_CHEMS.forEach(ch=>{if(pppChemAvgDose(win,ch.field)>0&&pppPrice(ch.field)===null)missing.push(ch.label);});
+  if(missing.length)return{cost:null,missing:missing};
+  let sum=0;
+  win.forEach(v=>{let c=0;PPP_CHEMS.forEach(ch=>{const pr=pppPrice(ch.field);if(pr!==null)c+=(parseFloat(v[ch.field])||0)*pr;});sum+=c;});
+  return{cost:win.length?sum/win.length:0,missing:[]};
+}
+/* Visits per month DERIVED from the window's real visit dates. Never an assumed cadence,
+   never a day name. Null when underivable (fewer than 2 visits, or a zero-day span). */
+function pppVisitsPerMonth(win){
+  if(win.length<2)return null;
+  const nw=new Date(win[0].dt+'T12:00:00'),od=new Date(win[win.length-1].dt+'T12:00:00');
+  const days=(nw-od)/86400000;
+  if(!(days>0))return null;
+  return PPP_DAYS_PER_MONTH/(days/(win.length-1));
+}
+/* Mean minutes over TIMED visits only. Epoch stamps (tstartMs/tendMs) first, clamped at
+   0; else the "HH:MM AM/PM" string parse with midnight wrap (same semantics as the
+   file's calcDur parser, returning minutes instead of a display string). Untimed visits
+   contribute no time. Null when nothing in the window is timed. */
+function pppMinPerVisit(win){
+  const hm=t=>{const m=String(t||'').match(/(\d+):(\d+)\s*(AM|PM)/i);if(!m)return null;let h=parseInt(m[1]),mn=parseInt(m[2]),ap=m[3].toUpperCase();if(ap==='PM'&&h!==12)h+=12;if(ap==='AM'&&h===12)h=0;return h*60+mn;};
+  let tot=0,n=0;
+  win.forEach(v=>{
+    let mins=null;
+    const sm=parseFloat(v.tstartMs),em=parseFloat(v.tendMs);
+    if(sm>0&&em>0)mins=Math.max(0,(em-sm)/60000);
+    else{const s=hm(v.tstart),e=hm(v.tend);if(s!==null&&e!==null)mins=e>=s?e-s:e+1440-s;}
+    if(mins!==null){tot+=mins;n++;}
+  });
+  return n?tot/n:null;
+}
+/* Revenue that reaches Victor: rt for Ripple-book pools, rt * PPP_OASIS_SHARE for
+   Oasis-book pools (rt on an Oasis pool is what the homeowner pays Oasis). Branched on
+   bookOf(c), never c.bk directly. Null when rt is not a positive number. */
+function pppRevenueMo(c){const rt=parseFloat(c.rt);if(!(rt>0))return null;return bookOf(c)==='Oasis'?rt*PPP_OASIS_SHARE:rt;}
+function pppFmtMoney(v){return '$'+Math.round(v);}
+function pppFmtPct(v){return Math.round(v*100)+'%';}
+/* One pool's ledger row. RANKED needs revenue set, complete chemical cost, and a
+   derivable visits-per-month; time may still be blank without removing the pool from
+   the ranking, because margin needs only revenue and cost. Everything else lands in
+   needs-data with the specific reason. */
+function pppRow(c){
+  const win=pppWin(c.id);
+  if(!win.length)return{cid:c.id,nm:c.ln+', '+c.fn,book:bookOf(c),ranked:false,reasons:['no visit history yet']};
+  const reasons=[];
+  const revMo=pppRevenueMo(c);
+  if(revMo===null)reasons.push('rate not set');
+  const cost=pppCostPerVisit(win);
+  if(cost.missing.length)reasons.push('price not set yet: '+cost.missing.join(', '));
+  const vpm=pppVisitsPerMonth(win);
+  if(vpm===null)reasons.push('not enough visits');
+  if(reasons.length)return{cid:c.id,nm:c.ln+', '+c.fn,book:bookOf(c),ranked:false,reasons:reasons};
+  const costMo=cost.cost*vpm;
+  const mpv=pppMinPerVisit(win);
+  const minMo=(mpv!==null)?mpv*vpm:null;
+  const revPerHr=(minMo!==null&&minMo>0)?revMo/(minMo/60):null;
+  const margin=(revMo-costMo)/revMo;
+  return{cid:c.id,nm:c.ln+', '+c.fn,book:bookOf(c),ranked:true,reasons:[],rt:parseFloat(c.rt),revMo:revMo,costMo:costMo,minMo:minMo,revPerHr:revPerHr,margin:margin};
+}
+/* All Active pools split into ranked (worst gross margin first) and needs-data.
+   Orphan visits fall out naturally: no Active client, no row. */
+function pppRows(){
+  const ranked=[],needsData=[];
+  DB.clients.forEach(c=>{if(c.st!=='Active')return;const r=pppRow(c);(r.ranked?ranked:needsData).push(r);});
+  ranked.sort((a,b)=>a.margin-b.margin);
+  needsData.sort((a,b)=>a.nm.localeCompare(b.nm));
+  return{ranked:ranked,needsData:needsData};
+}
+/* Mean gross margin per book over RANKED pools only, with the pool count (the Ripple
+   book is small today; labeling the count keeps the mean honest). */
+function pppBookRollup(ranked){
+  const agg={};
+  ranked.forEach(r=>{if(!agg[r.book])agg[r.book]={s:0,n:0};agg[r.book].s+=r.margin;agg[r.book].n++;});
+  const out={};
+  Object.keys(agg).forEach(k=>{out[k]={mean:agg[k].s/agg[k].n,n:agg[k].n};});
+  return out;
+}
+function pppRaiseCandidates(ranked){return ranked.filter(r=>r.margin<PPP_MARGIN_AMBER);}
+/* The "Prices" settings area (Truck Load expander pattern). Returns HTML. Saving writes
+   ONLY ripple_ppp_v1. */
+function pppSettingsRender(){
+  const s=pppGet();
+  let h='<div style="background:var(--g100);border-radius:10px;padding:12px;margin-top:10px;">';
+  h+='<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">Prices</div>';
+  h+='<div style="font-size:11px;color:var(--g600);margin-bottom:8px;">Enter what you pay per package and the package size in the unit you dose in. Per-unit cost is computed from those two numbers. Saved on this device only.</div>';
+  PPP_CHEMS.forEach(ch=>{
+    const p=s.prices[ch.field]||{};
+    const priced=pppPrice(ch.field)!==null;
+    h+='<div style="margin-bottom:10px;">'
+      +'<div style="font-size:12px;font-weight:600;color:var(--navy);">'+ch.label+' <span style="font-size:10px;font-weight:400;color:'+(priced?'var(--g400)':'#b45309')+';">you dose this in '+ch.unit+(priced?'':' · price not set yet')+'</span></div>'
+      +'<div style="display:flex;gap:8px;margin-top:4px;">'
+      +'<input type="number" step="0.01" class="fi" id="ppp-pr-'+ch.field+'" placeholder="Package price ($)" value="'+(p.price!==undefined&&p.price!==null?p.price:'')+'">'
+      +'<input type="number" step="0.01" class="fi" id="ppp-pk-'+ch.field+'" placeholder="Package size ('+ch.unit+')" value="'+(p.pack!==undefined&&p.pack!==null?p.pack:(ch.packDefault!==null?ch.packDefault:''))+'">'
+      +'</div></div>';
+  });
+  h+='<button class="btn bp bsm" style="width:100%;" onclick="pppSetPrice()">Save Prices</button>';
+  h+='</div>';
+  return h;
+}
+/* Saves every price row at once. The ONLY localStorage write in the whole PPP feature.
+   Never touches the DB, never calls save() or kickSync(). */
+function pppSetPrice(){
+  const s=pppGet();
+  PPP_CHEMS.forEach(ch=>{
+    const pr=document.getElementById('ppp-pr-'+ch.field),pk=document.getElementById('ppp-pk-'+ch.field);
+    if(!pr||!pk)return;
+    const pv=parseFloat(pr.value),kv=parseFloat(pk.value);
+    s.prices[ch.field]={price:(pv>0?pv:null),pack:(kv>0?kv:null)};
+  });
+  pppSave(s);
+  try{pppRender();}catch(e){}
+  try{renderPPPCard();}catch(e){}
+}
+/* The ledger view inside the mo-ppp modal. PURE READ of the DB. */
+function pppRender(){
+  const con=document.getElementById('ppp-con');if(!con)return;
+  const rr=pppRows();const roll=pppBookRollup(rr.ranked);const amber=pppRaiseCandidates(rr.ranked);
+  let h='<div class="ch" style="margin-bottom:6px;">Ranked by gross margin, worst first</div>';
+  if(!rr.ranked.length){
+    h+='<div style="font-size:12px;color:var(--g600);margin-bottom:10px;">No pools can be ranked yet. Set chemical prices below; each ranked pool also needs a rate and visit history.</div>';
+  }else{
+    h+='<div style="overflow-x:auto;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    h+='<tr style="color:var(--g600);text-align:left;"><th style="padding:4px 6px;">Pool</th><th style="padding:4px 6px;">Revenue/mo</th><th style="padding:4px 6px;">Chem cost/mo</th><th style="padding:4px 6px;">Minutes/mo</th><th style="padding:4px 6px;">Rev/hr</th><th style="padding:4px 6px;">Gross margin</th></tr>';
+    rr.ranked.forEach(r=>{
+      const amb=r.margin<PPP_MARGIN_AMBER;
+      h+='<tr style="border-top:1px solid var(--g100);'+(amb?'background:rgba(243,174,78,0.12);':'')+'">'
+        +'<td style="padding:5px 6px;font-weight:600;color:var(--navy);white-space:nowrap;">'+r.nm+' <span style="font-size:9px;font-weight:700;color:var(--g400);letter-spacing:0.5px;">'+r.book.toUpperCase()+'</span></td>'
+        +'<td style="padding:5px 6px;">'+pppFmtMoney(r.revMo)+'</td>'
+        +'<td style="padding:5px 6px;">'+pppFmtMoney(r.costMo)+'</td>'
+        +(r.minMo===null
+          ?'<td style="padding:5px 6px;color:var(--g400);" colspan="2">time not tracked yet</td>'
+          :'<td style="padding:5px 6px;">'+Math.round(r.minMo)+'</td><td style="padding:5px 6px;">'+(r.revPerHr!==null?pppFmtMoney(r.revPerHr):'')+'</td>')
+        +'<td style="padding:5px 6px;font-weight:700;color:'+(amb?'#b45309':'var(--navy)')+';">'+(amb?'🟡 ':'')+pppFmtPct(r.margin)+'</td></tr>';
+    });
+    h+='</table></div>';
+  }
+  const rl=[];
+  ['Ripple','Oasis'].forEach(b=>{if(roll[b])rl.push(b+' avg margin: '+pppFmtPct(roll[b].mean)+' ('+roll[b].n+' pool'+(roll[b].n===1?'':'s')+')');});
+  if(rl.length)h+='<div style="font-size:12px;font-weight:600;color:var(--navy);background:rgba(6,186,181,0.10);border:1px solid rgba(6,186,181,0.4);border-radius:8px;padding:8px 10px;margin-bottom:10px;">'+rl.join(' · ')+'</div>';
+  if(amber.length){
+    h+='<div class="ch" style="margin-bottom:6px;">Raise candidates</div>';
+    amber.forEach(r=>{h+='<div style="font-size:12px;color:#b45309;font-weight:600;margin-bottom:4px;">🟡 '+r.nm+' · rate $'+Math.round(r.rt)+'/mo · margin '+pppFmtPct(r.margin)+'</div>';});
+    h+='<div style="margin-bottom:6px;"></div>';
+  }
+  if(rr.needsData.length){
+    h+='<div class="ch" style="margin-bottom:6px;">Needs data</div>';
+    rr.needsData.forEach(r=>{h+='<div style="font-size:12px;color:var(--g600);margin-bottom:4px;"><span style="font-weight:600;color:var(--navy);">'+r.nm+'</span> <span style="font-size:9px;font-weight:700;color:var(--g400);letter-spacing:0.5px;">'+r.book.toUpperCase()+'</span> · '+r.reasons.join(' · ')+'</div>';});
+    h+='<div style="margin-bottom:6px;"></div>';
+  }
+  h+='<button class="btn bs bsm" style="width:100%;margin-top:8px;" onclick="window._pppSet=!window._pppSet;pppRender()">'+(window._pppSet?'▴ ':'▾ ')+'Prices</button>';
+  if(window._pppSet)h+=pppSettingsRender();
+  con.innerHTML=h;
+}
+/* Opens the ledger. When no chemical is priced yet, the Prices area opens itself so the
+   button on the honest empty-state card still lands Victor in the settings. */
+function openPPP(){
+  try{if(!PPP_CHEMS.some(ch=>pppPrice(ch.field)!==null))window._pppSet=true;}catch(e){}
+  try{pppRender();}catch(e){}
+  openM('mo-ppp');
+}
+/* The Dashboard card. Honest empty state until prices exist. */
+function renderPPPCard(){
+  try{
+    const el=document.getElementById('ppp-card');if(!el)return;
+    const any=PPP_CHEMS.some(ch=>pppPrice(ch.field)!==null);
+    let inner='<div class="ch" style="margin-bottom:6px;">💰 Profit per Pool</div>';
+    if(!any){
+      inner+='<div style="font-size:12px;color:var(--g600);margin-bottom:8px;">Prices not entered yet.</div>';
+    }else{
+      const rr=pppRows();const roll=pppBookRollup(rr.ranked);const amber=pppRaiseCandidates(rr.ranked);
+      const bits=[];
+      if(amber.length)bits.push('🟡 '+amber.length+' raise candidate'+(amber.length===1?'':'s'));
+      ['Ripple','Oasis'].forEach(b=>{if(roll[b])bits.push(b+' avg margin '+pppFmtPct(roll[b].mean));});
+      inner+='<div style="font-size:12px;color:var(--g600);margin-bottom:8px;">'+(bits.length?bits.join(' · '):'No pools can be ranked yet.')+'</div>';
+    }
+    inner+='<button class="btn bs bsm" style="width:100%;" onclick="openPPP()">Open Profit per Pool</button>';
+    el.innerHTML='<div class="cd" style="padding:12px 16px;">'+inner+'</div>';
+  }catch(e){}
+}
+try{renderPPPCard();}catch(e){}
 
 /* ═══════════ INIT ═══════════ */
 loadSummer();
