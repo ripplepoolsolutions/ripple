@@ -412,7 +412,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.9';
+const APP_VER='v7.9.1';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -2206,6 +2206,49 @@ function rPh(){
   document.getElementById('pgrid-a').innerHTML=mkGrid(photosAfter,'a','pgrid-a','pinp-a');
 }
 
+/* ═══════════ v7.9.1 DURATION-SANITY NUDGE ═══════════ */
+/* Data hygiene for the ledger's Minutes/mo and Rev/hr columns. At visit save and
+   edit-save, compute the duration the ledger will see (section 5c logic: epoch stamps
+   first, else the "HH:MM AM/PM" parse with midnight wrap) and NUDGE when the times are
+   implausible (start in the future, or end before start pre-clamp) or the duration is
+   under PPP_NUDGE_MIN_MINUTES with lightning NOT selected. Lightning suppresses only
+   the short-duration nudge, never the implausibility nudges. A NUDGE, never a block:
+   OK saves anyway, Cancel returns to the time fields. Untimed visits and skip records
+   never nudge. This layer writes nothing to any visit or client record.
+   New-save note: records carry no epoch stamps, but at save time the window epochs are
+   the exact source of the record's tend default and dur math (getVD uses now when Left
+   is unset), so the new-save nudge evaluates the same numbers the record is about to
+   be stamped with. Edit-save evaluates the record's own fields, which is what the
+   ledger reads. */
+function dsnEval(sm,em,ss,es){
+  sm=parseFloat(sm);em=parseFloat(em);
+  if(sm>0){
+    const now=Date.now();
+    const rawEnd=(em>0)?em:now;
+    const raw=(rawEnd-sm)/60000;
+    return{mins:Math.max(0,raw),neg:raw<0,fut:sm>now};
+  }
+  const p=t=>{const m=String(t||'').match(/(\d+):(\d+)\s*(AM|PM)/i);if(!m)return null;let h=parseInt(m[1]),mn=parseInt(m[2]),ap=m[3].toUpperCase();if(ap==='PM'&&h!==12)h+=12;if(ap==='AM'&&h===12)h=0;return h*60+mn;};
+  const s=p(ss),e=p(es);
+  if(s===null||e===null)return null;
+  return{mins:e>=s?e-s:e+1440-s,neg:false,fut:false};
+}
+function dsnFocus(id){try{const e=document.getElementById(id);if(e)e.focus();}catch(x){}}
+function dsnOK(sm,em,ss,es,ltg,focusId){
+  const r=dsnEval(sm,em,ss,es);
+  if(!r)return true;
+  let msg=null;
+  if(r.fut)msg='The Arrived time is in the future. Confirm the times?';
+  else if(r.neg)msg='The Left time is before the Arrived time. Confirm the times?';
+  else if(!ltg&&r.mins<PPP_NUDGE_MIN_MINUTES){const mm=Math.floor(r.mins);msg='This visit is only '+mm+(mm===1?' minute':' minutes')+' with no lightning selected. Confirm the times?';}
+  if(!msg)return true;
+  if(confirm(msg+'\n\nOK saves anyway. Cancel returns to the time fields.'))return true;
+  dsnFocus(focusId);
+  return false;
+}
+function dsnNewOK(d){return dsnOK(window._visitStartMs,window._visitEndMs,d.tstart,d.tend,!!d.ltg,'arr-time');}
+function dsnEditOK(v){if(!v||v.skip)return true;const lt=document.getElementById('ev-ltg');return dsnOK(v.tstartMs,v.tendMs,v.tstart,v.tend,lt?lt.checked:!!v.ltg,'ev-tm');}
+
 /* ═══════════ SAVE VISIT ═══════════ */
 function getVD(){
   const lsi=calcLSI();
@@ -2224,6 +2267,7 @@ function chkRouteComplete(d){/* v7.3: superseded by flowAfterSaveUI (guided rout
 function saveV(){
   const d=getVD();
   if(!d.cid){toast('Select a client');return;}
+  if(!dsnNewOK(d))return;
   stampDeparture(d,DB.clients.find(x=>x.id===d.cid));
   if(d.bic&&d.cacl){toast('⚠️ Cannot add bicarb and calcium same visit — remove one');return;}
   if(d.nvn){addFollowup(d.cid,d.nvn,null);}
@@ -2240,6 +2284,7 @@ function saveV(){
 function saveVR(){
   const d=getVD();
   if(!d.cid){toast('Select a client');return;}
+  if(!dsnNewOK(d))return;
   if(d.bic&&d.cacl){toast('⚠️ Cannot add bicarb and calcium same visit — remove one');return;}
   if(d.nvn){addFollowup(d.cid,d.nvn,null);}
   DB.visits.push(d);
@@ -2764,6 +2809,7 @@ function editVisit(){
 
 function saveEditVisit(){
   if(detailVisitIdx===null||detailVisitIdx<0)return;
+  if(!dsnEditOK(DB.visits[detailVisitIdx]))return;
   const v=DB.visits[detailVisitIdx];
   v.dt=gv('ev-dt')||v.dt;
   v.tm=gv('ev-tm')||v.tm;
