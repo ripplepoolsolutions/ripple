@@ -146,7 +146,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="toast" id="toast"></div>
 
 <!-- DASHBOARD -->
-<div class="pg act" id="pg-dash"><div id="draft-card"></div><div id="flow-card"></div><div class="sg" id="ds"></div><div id="summer-badge-wrap" style="margin-bottom:10px;"></div><div id="unsent-section"></div><div class="cd" style="padding:12px 16px;"><div class="ch" style="margin-bottom:8px;">Data Management</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span id="storage-lbl" style="font-size:11px;color:var(--g400);">Storage: calculating...</span><span id="storage-visit-count" style="font-size:11px;color:var(--g400);"></span></div><div style="background:var(--g100);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;"><div id="storage-bar" style="height:100%;border-radius:4px;background:var(--teal);width:0%;transition:width 0.5s;"></div></div><div style="display:flex;gap:8px;margin-bottom:8px;"><button onclick="dlBackup()" style="flex:1;border:1px solid var(--teal);background:none;color:var(--teal);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💾 Back Up</button><button onclick="showPurgeMo()" style="flex:1;border:1px solid var(--gold);background:none;color:var(--gold);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Trim Old Visits</button></div><div style="display:flex;gap:8px;"><button onclick="showClearPhotos()" style="flex:1;border:1px solid var(--red);background:none;color:var(--red);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🧹 Clear All Photos</button></div><div style="display:flex;gap:8px;margin-top:8px;align-items:stretch;"><button onclick="syncNow(false)" style="flex:1;border:none;background:var(--navy);color:white;border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Sync Now</button><button onclick="openSyncSetup()" style="width:46px;border:1px solid var(--g200);background:none;color:var(--g600);border-radius:8px;padding:9px;font-size:14px;cursor:pointer;">⚙️</button></div><div id="sync-status" style="font-size:11px;color:var(--g400);margin-top:6px;text-align:center;">Sync not set up — tap ⚙️</div></div><div class="cd"><div class="ch">Today's Route</div><div id="dr"></div></div><div class="cd"><div class="ch">Recent Visits</div><div id="dv"></div></div></div>
+<div class="pg act" id="pg-dash"><div id="draft-card"></div><div id="flow-card"></div><div id="truck-card"></div><div class="sg" id="ds"></div><div id="summer-badge-wrap" style="margin-bottom:10px;"></div><div id="unsent-section"></div><div class="cd" style="padding:12px 16px;"><div class="ch" style="margin-bottom:8px;">Data Management</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span id="storage-lbl" style="font-size:11px;color:var(--g400);">Storage: calculating...</span><span id="storage-visit-count" style="font-size:11px;color:var(--g400);"></span></div><div style="background:var(--g100);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;"><div id="storage-bar" style="height:100%;border-radius:4px;background:var(--teal);width:0%;transition:width 0.5s;"></div></div><div style="display:flex;gap:8px;margin-bottom:8px;"><button onclick="dlBackup()" style="flex:1;border:1px solid var(--teal);background:none;color:var(--teal);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💾 Back Up</button><button onclick="showPurgeMo()" style="flex:1;border:1px solid var(--gold);background:none;color:var(--gold);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Trim Old Visits</button></div><div style="display:flex;gap:8px;"><button onclick="showClearPhotos()" style="flex:1;border:1px solid var(--red);background:none;color:var(--red);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🧹 Clear All Photos</button></div><div style="display:flex;gap:8px;margin-top:8px;align-items:stretch;"><button onclick="syncNow(false)" style="flex:1;border:none;background:var(--navy);color:white;border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Sync Now</button><button onclick="openSyncSetup()" style="width:46px;border:1px solid var(--g200);background:none;color:var(--g600);border-radius:8px;padding:9px;font-size:14px;cursor:pointer;">⚙️</button></div><div id="sync-status" style="font-size:11px;color:var(--g400);margin-top:6px;text-align:center;">Sync not set up — tap ⚙️</div></div><div class="cd"><div class="ch">Today's Route</div><div id="dr"></div></div><div class="cd"><div class="ch">Recent Visits</div><div id="dv"></div></div></div>
 
 <!-- CLIENTS -->
 <div class="pg" id="pg-cli"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h2 style="font-family:'Playfair Display',serif;color:var(--navy);font-size:20px;">Clients</h2><button class="btn bp bsm" onclick="openAdd()">+ Add</button></div><input type="text" class="fi" placeholder="Search..." id="csrch" oninput="rCli()" style="margin-bottom:12px;"><select class="fs" id="cbkf" onchange="rCli()" style="margin-bottom:12px;display:none;"></select><div id="clist"></div></div>
@@ -399,6 +399,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="mo" id="mo-skip"><div class="ml"><div class="mh"><span>Skip Stop</span><button class="mx" onclick="closeM('mo-skip')">&times;</button></div><div id="mo-skip-body"></div></div></div>
 <div class="mo" id="mo-fin"><div class="ml"><div class="mh"><span>End of Week \u2014 Finalize</span><button class="mx" onclick="closeM('mo-fin')">&times;</button></div><div id="mo-fin-body"></div></div></div>
 <div class="mo" id="mo-phr"><div class="ml"><div class="mh"><span id="phr-title">Pool Health Report</span><button class="mx" onclick="closeM('mo-phr')">&times;</button></div><div class="fg"><label class="fl">Reporting Period</label><select class="fs" id="phr-period" onchange="phrPeriodChange()"></select></div><div id="phr-custom" style="display:none;gap:10px;margin-bottom:12px;"><div style="flex:1;"><label class="fl">From</label><input type="date" class="fi" id="phr-from" onchange="phrCustomChange()"></div><div style="flex:1;"><label class="fl">To</label><input type="date" class="fi" id="phr-to" onchange="phrCustomChange()"></div></div><div id="phr-con"></div><button class="btn bp" id="phr-email-btn" onclick="phrEmailMe()" style="display:none;margin-top:12px;">📧 Email Me a Review Copy</button></div></div>
+<div class="mo" id="mo-truck"><div class="ml"><div class="mh"><span>🚚 Truck Load</span><button class="mx" onclick="closeM('mo-truck')">&times;</button></div><div id="truck-con"></div></div></div>
 
 <nav class="bnav">
 <button class="ni act" onclick="nav('dash',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Home</button>
@@ -410,7 +411,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.7';
+const APP_VER='v7.8';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -596,7 +597,7 @@ function openNext(auto,kick){
   const isCb=f.cb.includes(c.id);
   title.textContent=isMiss?'Catch-Up Stop':(isCb?'Circle-Back Stop':'Next Stop');
   body.innerHTML=`
-    ${kick?stormLine():''}
+    ${kick?(stormLine()+truckKickLine()):''}
     ${isMiss?`<div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:4px;letter-spacing:0.5px;">⏪ MISSED ${(c.sd||'').toUpperCase()} — PRIORITY</div>`:''}
     ${isCb?`<div style="font-size:11px;font-weight:700;color:var(--yel);margin-bottom:4px;letter-spacing:0.5px;">↩ CIRCLE-BACK</div>`:''}
     <div style="font-size:17px;font-weight:600;color:var(--navy);font-family:'Playfair Display',serif;">${c.ln}, ${c.fn}</div>
@@ -740,6 +741,7 @@ function flowAfterSaveUI(){
   }
 }
 function renderFlowCard(){
+  try{renderTruckCard();}catch(e){}
   const el=document.getElementById('flow-card');if(!el)return;
   const f=flowGet();const q=flowQueue();
   const total=q.missed.length+q.regular.length+q.cb.length;
@@ -4147,6 +4149,259 @@ function exportXLSX(){
 }
 
 function dl2(c,fn,t){const b=new Blob([c],{type:t+';charset=utf-8;'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=fn;a.click();URL.revokeObjectURL(u);}
+
+/* ═══════════ v7.8: TRUCK LOAD (bulk load forecast + chemical stock ledger) ═══════════ */
+/* Machine A ("This Week's Load") is a PURE READ: it computes live from visit history and
+   writes nothing. No visit record, no client record, no flag, no save(), no kickSync().
+   Machine B ("Chemical Stock") writes ONLY the ripple_truck_v1 key; the DB is never touched
+   by any ledger operation. calcDose is neither called nor duplicated: the forecast averages
+   real logged doses. Skip records are excluded from all math (same rule as the learned burn
+   rate). Per-device in v1, same class as flow state; cross-device sync is a named v1.1 item.
+   Route days derive from the roster; Gorman restock days are a separate fact. Nothing here
+   is hardcoded to a weekday. */
+const TLF_WINDOW=4;                 // recent real visits averaged per pool (first thing to tune)
+const TLF_CHLORINE_JUG_GAL=2.5;
+const TLF_ACID_JUG_GAL=1.0;
+const TLF_CHLORINE_SPARE_JUGS=2;
+const TLF_ACID_SPARE_JUGS=2;
+const TLF_HEAT_CAP=1.25;            // max chlorine heat-lean multiplier
+const TLF_DRY_THRESHOLD_PCT=0.25;   // dry chems reorder at 25% of the starting amount
+const TLF_SALT_BAG_LBS=40;
+const TLF_SALT_FLOOR_BAGS=2;        // salt reorders at 2 bags remaining
+const TLF_GORMAN_DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday']; // Gorman open days, independent of route days
+const TLF_KEY='ripple_truck_v1';
+const TLF_STOCK_META={bic:{nm:'Bicarb'},cyaa:{nm:'Stabilizer (CYA)'},cacl:{nm:'Calcium Chloride'},salta:{nm:'Salt'}};
+function tlfGet(){
+  try{const s=JSON.parse(localStorage.getItem(TLF_KEY));if(s&&s.transports&&s.stock)return s;}catch(e){}
+  return{transports:{truck:{chlorineJugs:null,acidJugs:null},trailer:{chlorineJugs:32,acidJugs:12}},selected:'trailer',stock:{bic:null,cyaa:null,cacl:null,salta:null}};
+}
+function tlfSave(s){try{localStorage.setItem(TLF_KEY,JSON.stringify(s));}catch(e){}}
+/* Roster-derived first route day: mirror of lastServiceDayName. Never hardcoded. */
+function firstServiceDayName(){
+  let best=99;
+  DB.clients.forEach(c=>{if(c.st==='Active'){const i=WEEK_ORDER.indexOf(c.sd);if(i>=0&&i<best)best=i;}});
+  return best<99?WEEK_ORDER[best]:'Monday';
+}
+function isFirstRouteDay(now){return dayNameOf(now||new Date())===firstServiceDayName();}
+/* Per-pool average over the last TLF_WINDOW REAL visits. A visit with no dose of a chemical
+   counts as 0 toward that chemical's average (this is what lets salt pools self-zero on
+   chlorine). Returns null only when the pool has NO real visits at all: no forecastable
+   history, so the pool goes on the "bring extra" list instead of into the totals. */
+function tlfPoolAvg(cid){
+  const vs=[...DB.visits].filter(v=>v.cid===cid&&!v.skip).sort((a,b)=>String(b.dt||'').localeCompare(String(a.dt||''))).slice(0,TLF_WINDOW);
+  if(!vs.length)return null;
+  let cla=0,acid=0,ws=0,wn=0;
+  vs.forEach(v=>{cla+=(parseFloat(v.cla)||0);acid+=(parseFloat(v.acid)||0);const w=parseFloat(v.wxr);if(!isNaN(w)&&w>0){ws+=w;wn++;}});
+  return{cla:cla/vs.length,acid:acid/vs.length,wxrAvg:wn?ws/wn:null};
+}
+/* Machine A: the fleet-wide weekly forecast across all Active pools. PURE READ.
+   Heat-lean is per pool, chlorine only, capped at TLF_HEAT_CAP, and skipped for any pool
+   whose averaged visits carry no stamped weather rate (older visits predate the stamp). */
+function tlfForecast(){
+  let cur=null;try{cur=(typeof weatherRate==='function')?weatherRate():null;}catch(e){}
+  let claGal=0,acidGal=0,lean=false;const noHist=[];const dayCla={},dayAcid={};
+  DB.clients.forEach(c=>{
+    if(c.st!=='Active')return;
+    const a=tlfPoolAvg(c.id);
+    if(!a){noHist.push(c.ln+', '+c.fn);return;}
+    let pc=a.cla;
+    if(cur&&a.wxrAvg){const m=Math.min(TLF_HEAT_CAP,Math.max(1,cur/a.wxrAvg));if(m>1.001)lean=true;pc*=m;}
+    claGal+=pc;acidGal+=a.acid;
+    const d=c.sd||'';dayCla[d]=(dayCla[d]||0)+pc;dayAcid[d]=(dayAcid[d]||0)+a.acid;
+  });
+  const claJugsBase=Math.ceil(claGal/TLF_CHLORINE_JUG_GAL);
+  const acidJugsBase=Math.ceil(acidGal/TLF_ACID_JUG_GAL);
+  const claJugs=claJugsBase+(claGal>0?TLF_CHLORINE_SPARE_JUGS:0);
+  const acidJugs=acidJugsBase+(acidGal>0?TLF_ACID_SPARE_JUGS:0);
+  /* First-half / second-half split: walk the roster's route days in week order; the split
+     day is the day at which cumulative expected chlorine first reaches half the pre-buffer
+     total. Derived from the roster, never hardcoded. */
+  const days=WEEK_ORDER.filter(d=>(dayCla[d]||0)>0||(dayAcid[d]||0)>0);
+  let split=null;
+  if(days.length>1&&claGal>0){
+    let cCla=0,cAcid=0,sd=days[days.length-1];
+    for(let i=0;i<days.length;i++){cCla+=(dayCla[days[i]]||0);cAcid+=(dayAcid[days[i]]||0);if(cCla>=claGal/2){sd=days[i];break;}}
+    split={day:sd,
+      cla1:Math.ceil(cCla/TLF_CHLORINE_JUG_GAL),acid1:Math.ceil(cAcid/TLF_ACID_JUG_GAL),
+      cla2:Math.ceil(Math.max(0,claGal-cCla)/TLF_CHLORINE_JUG_GAL),acid2:Math.ceil(Math.max(0,acidGal-cAcid)/TLF_ACID_JUG_GAL)};
+  }
+  return{claGal:claGal,acidGal:acidGal,claJugsBase:claJugsBase,acidJugsBase:acidJugsBase,claJugs:claJugs,acidJugs:acidJugs,lean:lean,noHist:noHist,split:split};
+}
+/* Gorman resupply note: keyed off Gorman's own open days, a separate fact from route days. */
+function tlfGormanNote(){
+  const order=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const today=dayNameOf(new Date());
+  if(TLF_GORMAN_DAYS.indexOf(today)>=0)return 'restock at Gorman';
+  const i=order.indexOf(today);
+  for(let k=1;k<=7;k++){const d=order[(i+k)%7];if(TLF_GORMAN_DAYS.indexOf(d)>=0)return 'Gorman closed today, buy '+d;}
+  return 'restock at Gorman';
+}
+/* Machine B: consumption is a pure read of real visit records since the baseline date. */
+function tlfConsumed(chem,sinceDt){
+  let s=0;DB.visits.forEach(v=>{if(!v.skip&&String(v.dt||'')>=sinceDt)s+=(parseFloat(v[chem])||0);});return s;
+}
+function tlfStockRow(chem){
+  const st=tlfGet().stock[chem];
+  if(!st||st.baseline===null||st.baseline===undefined)return null;
+  const base=parseFloat(st.baseline)||0;
+  const rest=(st.restocks||[]).reduce((a,r)=>a+(parseFloat(r.amount)||0),0);
+  const remaining=base+rest-tlfConsumed(chem,st.baselineDate||'0000-00-00');
+  if(chem==='salta'){
+    const bags=remaining/TLF_SALT_BAG_LBS;
+    return{chem:chem,remaining:remaining,bags:bags,low:bags<=TLF_SALT_FLOOR_BAGS};
+  }
+  return{chem:chem,remaining:remaining,base:base,low:remaining<=base*TLF_DRY_THRESHOLD_PCT};
+}
+function tlfLowRows(){return ['bic','cyaa','cacl','salta'].map(tlfStockRow).filter(r=>r&&r.low);}
+function tlfFmtBags(b){const r=Math.round(b*10)/10;return(r%1===0?String(Math.round(r)):r.toFixed(1));}
+function tlfBagWord(b){return Math.abs(b-1)<0.05?'bag':'bags';}
+/* Restocks and baselines write ONLY the ripple_truck_v1 key. */
+function tlfRestock(chem,amt){
+  const s=tlfGet();const st=s.stock[chem];if(!st)return;
+  st.restocks=st.restocks||[];
+  st.restocks.push({amount:amt,date:localDate()});
+  tlfSave(s);try{truckRun();}catch(e){}try{renderTruckCard();}catch(e){}
+}
+function tlfAddBag(){tlfRestock('salta',TLF_SALT_BAG_LBS);}
+function tlfAdd50(chem){tlfRestock(chem,50);}
+function tlfRestockPrompt(chem){
+  const meta=TLF_STOCK_META[chem];const isSalt=chem==='salta';
+  const raw=prompt('Restock amount for '+meta.nm+(isSalt?' (bags):':' (lbs):'),isSalt?'1':'50');
+  if(raw===null)return;
+  const n=parseFloat(raw);if(isNaN(n)||n<=0){alert('Enter a number greater than 0.');return;}
+  tlfRestock(chem,isSalt?n*TLF_SALT_BAG_LBS:n);
+}
+function tlfSetBaseline(chem){
+  const el=document.getElementById('tk-base-'+chem);if(!el)return;
+  const n=parseFloat(el.value);
+  if(isNaN(n)||n<0){alert('Enter a starting amount first.');return;}
+  const s=tlfGet();
+  s.stock[chem]={baseline:(chem==='salta'?n*TLF_SALT_BAG_LBS:n),baselineDate:localDate(),restocks:[]};
+  tlfSave(s);try{truckRun();}catch(e){}try{renderTruckCard();}catch(e){}
+}
+function tlfSetCaps(){
+  const s=tlfGet();
+  const g=function(id){const el=document.getElementById(id);if(!el)return null;const n=parseFloat(el.value);return(isNaN(n)||n<0)?null:Math.round(n);};
+  s.transports.truck.chlorineJugs=g('tk-truck-cl');
+  s.transports.truck.acidJugs=g('tk-truck-ac');
+  const tc=g('tk-tr-cl'),ta=g('tk-tr-ac');
+  if(tc!==null)s.transports.trailer.chlorineJugs=tc;
+  if(ta!==null)s.transports.trailer.acidJugs=ta;
+  tlfSave(s);try{truckRun();}catch(e){}
+}
+function tlfSelect(t){const s=tlfGet();s.selected=t;tlfSave(s);try{truckRun();}catch(e){}}
+function openTruck(){try{truckRun();}catch(e){}openM('mo-truck');}
+/* The "🚚 Truck Load" view. */
+function truckRun(){
+  const con=document.getElementById('truck-con');if(!con)return;
+  const s=tlfGet();const f=tlfForecast();
+  let h='<div class="ch" style="margin-bottom:6px;">This Week\'s Load</div>';
+  if(f.claGal<=0&&f.acidGal<=0&&!f.noHist.length){
+    h+='<div class="emp">No visit history to forecast from yet.</div>';
+  }else{
+    if(f.claGal>0||f.acidGal>0){
+      h+='<div style="font-size:14px;color:var(--navy);font-weight:600;">Chlorine: about '+(Math.round(f.claGal*10)/10)+' gal ('+f.claJugsBase+' jugs + '+TLF_CHLORINE_SPARE_JUGS+' spare = '+f.claJugs+')</div>';
+      h+='<div style="font-size:14px;color:var(--navy);font-weight:600;margin-top:2px;">Acid: about '+(Math.round(f.acidGal*10)/10)+' gal ('+f.acidJugsBase+' jugs + '+TLF_ACID_SPARE_JUGS+' spare = '+f.acidJugs+')</div>';
+    }
+    if(f.split&&(f.split.cla2>0||f.split.acid2>0)){
+      h+='<div style="font-size:12px;color:var(--g600);margin-top:8px;">First half (through '+f.split.day+'): '+f.split.cla1+' jugs chlorine, '+f.split.acid1+' jugs acid.<br>Second half: '+f.split.cla2+' jugs chlorine, '+f.split.acid2+' jugs acid.<br><span style="color:var(--g400);">Spares ride the first load.</span></div>';
+    }
+    if(f.lean)h+='<div style="font-size:12px;color:#b45309;margin-top:8px;">☀️ Leaning higher: the week ahead runs hotter than recent visits. Chlorine leans up to 25% higher when that happens.</div>';
+    if(f.noHist.length)h+='<div style="font-size:12px;color:var(--g600);margin-top:8px;"><b>Bring extra (no history yet):</b> '+f.noHist.join(' · ')+'</div>';
+  }
+  h+='<div class="ch" style="margin:16px 0 6px;">Loading with:</div>';
+  h+='<div style="display:flex;gap:8px;margin-bottom:8px;">'
+    +'<button class="btn '+(s.selected==='truck'?'bp':'bs')+' bsm" style="flex:1;" onclick="tlfSelect(\'truck\')">Truck Bed</button>'
+    +'<button class="btn '+(s.selected==='trailer'?'bp':'bs')+' bsm" style="flex:1;" onclick="tlfSelect(\'trailer\')">Trailer</button></div>';
+  const cap=s.transports[s.selected]||{chlorineJugs:null,acidJugs:null};
+  const nmCap=s.selected==='trailer'?'Trailer':'Truck bed';
+  const nmLow=s.selected==='trailer'?'trailer':'truck bed';
+  if(cap.chlorineJugs===null||cap.chlorineJugs===undefined||cap.acidJugs===null||cap.acidJugs===undefined){
+    h+='<div style="font-size:13px;color:var(--g600);">'+nmCap+' capacity not set yet. Set it below.</div>';
+  }else if(f.claGal<=0&&f.acidGal<=0){
+    h+='<div style="font-size:13px;color:var(--g800);">'+nmCap+' holds '+cap.chlorineJugs+' chlorine + '+cap.acidJugs+' acid jugs.</div>';
+  }else{
+    const overC=f.claJugs>cap.chlorineJugs,overA=f.acidJugs>cap.acidJugs;
+    let line=nmCap+' holds '+cap.chlorineJugs+' chlorine + '+cap.acidJugs+' acid jugs. ';
+    if(!overC&&!overA){line+='This week fits.';}
+    else{
+      const parts=[];
+      if(overC)parts.push('chlorine ('+f.claJugs+' jugs) exceeds the '+nmLow+' ('+cap.chlorineJugs+')');
+      if(overA)parts.push('acid ('+f.acidJugs+' jugs) exceeds the '+nmLow+' ('+cap.acidJugs+')');
+      line+='This week\'s '+parts.join(' and ')+'. You will need a midweek top-off.';
+    }
+    h+='<div style="font-size:13px;color:'+((overC||overA)?'#b45309':'var(--g800)')+';font-weight:'+((overC||overA)?'600':'400')+';">'+line+'</div>';
+  }
+  h+='<div class="ch" style="margin:16px 0 6px;">Chemical Stock</div>';
+  ['bic','cyaa','cacl','salta'].forEach(function(ch){
+    const meta=TLF_STOCK_META[ch];const r=tlfStockRow(ch);
+    if(!r){h+='<div style="font-size:13px;color:var(--g400);padding:4px 0;">'+meta.nm+': starting stock not set yet.</div>';return;}
+    let txt,btn='';
+    if(ch==='salta'){
+      const b=Math.max(0,r.bags);
+      txt='Salt: '+tlfFmtBags(b)+' '+tlfBagWord(b)+' left'+(r.low?' (buy more)':'');
+      if(r.low)btn='<button class="btn bs bsm" onclick="tlfAddBag()" style="margin-left:8px;white-space:nowrap;">+ Add bag</button>';
+    }else{
+      txt=meta.nm+': '+Math.max(0,Math.round(r.remaining))+' lbs left of '+Math.round(r.base)+(r.low?' (buy more)':'');
+      if(r.low)btn='<button class="btn bs bsm" onclick="tlfAdd50(\''+ch+'\')" style="margin-left:8px;white-space:nowrap;">+ Add 50 lb</button>';
+    }
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:13px;color:'+(r.low?'#b45309':'var(--g800)')+';font-weight:'+(r.low?'600':'400')+';"><span>'+(r.low?'🟡 ':'')+txt+'</span>'+btn+'</div>';
+    if(r.low)h+='<div style="font-size:11px;color:#b45309;margin:0 0 4px;">'+tlfGormanNote()+'</div>';
+  });
+  h+='<button class="btn bs bsm" style="width:100%;margin-top:14px;" onclick="window._tkSet=!window._tkSet;truckRun()">'+(window._tkSet?'▴ Hide':'▾ Set')+' capacities and starting stock</button>';
+  if(window._tkSet){
+    const tr=s.transports.trailer,tk=s.transports.truck;
+    const iv=function(v){return(v===null||v===undefined)?'':String(v);};
+    h+='<div style="margin-top:10px;border:1px solid var(--g200);border-radius:8px;padding:10px;">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">Transport capacities (jugs)</div>'
+      +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:12px;color:var(--g800);"><span style="width:74px;">Truck Bed</span><input type="number" class="fi" id="tk-truck-cl" placeholder="chlorine" value="'+iv(tk.chlorineJugs)+'" style="flex:1;padding:6px;"><input type="number" class="fi" id="tk-truck-ac" placeholder="acid" value="'+iv(tk.acidJugs)+'" style="flex:1;padding:6px;"></div>'
+      +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:12px;color:var(--g800);"><span style="width:74px;">Trailer</span><input type="number" class="fi" id="tk-tr-cl" placeholder="chlorine" value="'+iv(tr.chlorineJugs)+'" style="flex:1;padding:6px;"><input type="number" class="fi" id="tk-tr-ac" placeholder="acid" value="'+iv(tr.acidJugs)+'" style="flex:1;padding:6px;"></div>'
+      +'<button class="btn bs bsm" style="width:100%;" onclick="tlfSetCaps()">Save Capacities</button>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--navy);margin:12px 0 6px;">Starting stock</div>';
+    ['bic','cyaa','cacl','salta'].forEach(function(ch){
+      const meta=TLF_STOCK_META[ch];const st=s.stock[ch];const isSalt=ch==='salta';
+      const cur=(st&&st.baseline!==null&&st.baseline!==undefined)?(isSalt?tlfFmtBags(st.baseline/TLF_SALT_BAG_LBS):String(Math.round(st.baseline))):'';
+      h+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;font-size:12px;color:var(--g800);"><span style="width:110px;">'+meta.nm+(isSalt?' (bags)':' (lbs)')+'</span>'
+        +'<input type="number" class="fi" id="tk-base-'+ch+'" value="'+cur+'" style="flex:1;padding:6px;min-width:0;">'
+        +'<button class="btn bs bsm" onclick="tlfSetBaseline(\''+ch+'\')" style="white-space:nowrap;">Set</button>'
+        +'<button class="btn bs bsm" onclick="tlfRestockPrompt(\''+ch+'\')" style="white-space:nowrap;">+ Restock</button></div>';
+    });
+    h+='<div style="font-size:11px;color:var(--g400);margin-top:4px;">Setting a starting amount stamps today as the baseline date and clears prior restocks. Doses logged on visits subtract automatically.</div></div>';
+  }
+  con.innerHTML=h;
+}
+/* Home card near the Next Stop card. */
+function renderTruckCard(){
+  try{
+    const el=document.getElementById('truck-card');if(!el)return;
+    const f=tlfForecast();const lows=tlfLowRows();
+    let inner='<div class="ch" style="margin-bottom:6px;">🚚 Truck Load</div>';
+    if(f.claGal>0||f.acidGal>0)inner+='<div style="font-size:12px;color:var(--g600);margin-bottom:8px;">This week: about '+f.claJugs+' jugs chlorine · '+f.acidJugs+' jugs acid</div>';
+    lows.forEach(function(r){
+      const b=Math.max(0,r.bags||0);
+      inner+='<div style="font-size:12px;color:#b45309;font-weight:600;margin-bottom:4px;">'+(r.chem==='salta'?('🧂 Salt low: '+tlfFmtBags(b)+' '+tlfBagWord(b)+' left'):('🟡 '+TLF_STOCK_META[r.chem].nm+' low: '+Math.max(0,Math.round(r.remaining))+' lbs left'))+', '+tlfGormanNote()+'</div>';
+    });
+    inner+='<button class="btn bs bsm" style="width:100%;" onclick="openTruck()">Open Truck Load</button>';
+    el.innerHTML='<div class="cd" style="padding:12px 16px;">'+inner+'</div>';
+  }catch(e){}
+}
+/* Morning kickoff lines: the week's load on the FIRST route day (roster-derived), and
+   low-stock alerts any day. Rides the same injection point as the storm line. */
+function truckKickLine(){
+  try{
+    let h='';
+    if(isFirstRouteDay()){
+      const f=tlfForecast();
+      if(f.claGal>0||f.acidGal>0)h+='<div style="font-size:12px;font-weight:600;color:var(--navy);background:rgba(6,186,181,0.10);border:1px solid rgba(6,186,181,0.4);border-radius:8px;padding:8px 10px;margin-bottom:10px;">🚚 This week\'s load: about '+f.claJugs+' jugs chlorine, '+f.acidJugs+' jugs acid</div>';
+    }
+    tlfLowRows().forEach(function(r){
+      const b=Math.max(0,r.bags||0);
+      h+='<div style="font-size:12px;font-weight:600;color:#b45309;background:rgba(243,174,78,0.12);border:1px solid rgba(243,174,78,0.45);border-radius:8px;padding:8px 10px;margin-bottom:10px;">'+(r.chem==='salta'?('🧂 Salt low: '+tlfFmtBags(b)+' '+tlfBagWord(b)+' left'):('🟡 '+TLF_STOCK_META[r.chem].nm+' low: '+Math.max(0,Math.round(r.remaining))+' lbs left'))+', '+tlfGormanNote()+'</div>';
+    });
+    return h;
+  }catch(e){return '';}
+}
+try{renderTruckCard();}catch(e){}
 
 /* ═══════════ INIT ═══════════ */
 loadSummer();
