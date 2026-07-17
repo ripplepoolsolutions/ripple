@@ -190,7 +190,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="fr"><div class="fg"><label class="fl">Liquid Chlorine (gal)</label><input type="number" class="fi" id="vcla" step="0.25" oninput="doCalc()"></div><div class="fg"><label class="fl">Muriatic Acid (gal)</label><input type="number" class="fi" id="vacid" step="0.25" oninput="doCalc()"></div></div>
 <div class="fr"><div class="fg"><label class="fl">Sodium Bicarb (lbs)</label><input type="number" class="fi" id="vbic" step="3" oninput="chkBicCa();doCalc()"><div id="vbic-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px;font-weight:600;">⚠️ Cannot add with calcium — schedule next visit</div></div><div class="fg"><label class="fl">CYA Added (lbs)</label><input type="number" class="fi" id="vcyaa" step="3" oninput="doCalc()"></div></div>
 <div class="fr"><div class="fg" id="vsalta-wrap" style="display:none;"><label class="fl">Salt Added (lbs)</label><input type="number" class="fi" id="vsalta" step="1" oninput="doCalc()"></div><div class="fg"><label class="fl">Calcium Chloride (lbs)</label><input type="number" class="fi" id="vcacl" step="1" oninput="chkBicCa();doCalc()"><div id="vcacl-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px;font-weight:600;">⚠️ Cannot add with bicarb — schedule next visit</div></div></div>
-<div class="fr"><div class="fg"><label class="fl">Phosphate Rem (oz)</label><input type="number" class="fi" id="vpr" step="1" oninput="doCalc()"></div><div class="fg"></div></div>
+<div class="fr"><div class="fg"><label class="fl">Phosphate Rem (oz)</label><input type="number" class="fi" id="vpr" step="1" oninput="doCalc()"></div><div class="fg"><label class="fl">Chlorine Tabs (3 in)</label><input type="number" class="fi" id="vtab" step="1" min="0" oninput="tabNote()"><div id="vtab-note" style="display:none;font-size:11px;color:var(--navy);opacity:0.75;margin-top:4px;line-height:1.5;"></div></div></div>
 <div class="fg"><label class="fl">Other</label><input type="text" class="fi" id="vother"></div>
 </div></div>
 <div class="cd"><div class="st" onclick="tog(this)">Service Performed <span class="ar">▶</span></div><div class="sc">
@@ -366,7 +366,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="fr"><div class="fg"><label class="fl">Liquid Chlorine (gal)</label><input type="number" class="fi" id="ev-cla" step="0.25"></div><div class="fg"><label class="fl">Muriatic Acid (gal)</label><input type="number" class="fi" id="ev-acid" step="0.25"></div></div>
 <div class="fr"><div class="fg"><label class="fl">Bicarb (lbs)</label><input type="number" class="fi" id="ev-bic" step="3"></div><div class="fg"><label class="fl">CYA (lbs)</label><input type="number" class="fi" id="ev-cyaa" step="3"></div></div>
 <div class="fr"><div class="fg"><label class="fl">Salt (lbs)</label><input type="number" class="fi" id="ev-salta" step="1"></div><div class="fg"><label class="fl">Calcium Chloride (lbs)</label><input type="number" class="fi" id="ev-cacl" step="1"></div></div>
-<div class="fr"><div class="fg"><label class="fl">Phos Rem (oz)</label><input type="number" class="fi" id="ev-pr" step="1"></div><div class="fg"></div></div>
+<div class="fr"><div class="fg"><label class="fl">Phos Rem (oz)</label><input type="number" class="fi" id="ev-pr" step="1"></div><div class="fg"><label class="fl">Chlorine Tabs (3 in)</label><input type="number" class="fi" id="ev-tab" step="1" min="0"></div></div>
 <div class="fg"><label class="fl">Other Chems</label><input type="text" class="fi" id="ev-oth"></div>
 </div>
 <div class="cd"><div class="ch">Service & Notes</div>
@@ -412,7 +412,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.9.1';
+const APP_VER='v7.10';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -513,10 +513,84 @@ function waterWatchLocal(cid){
   }
   return out;
 }
+/* ═══ v7.10: FLOATER TAB TRACKING ═══
+   NewWave 3in trichlor tabs. 99% trichloro-s-triazinetrione: 90% available chlorine,
+   54% cyanuric acid by weight. 1 lb of anything per 10,000 gal = 12 ppm.
+   TAB_WEIGHT_OZ is the tune point: verify against the bucket label. */
+const TAB_WEIGHT_OZ    = 8;      // standard 3in tab; some brands run 7
+const TAB_CYA_FRAC     = 0.54;   // CYA fraction by weight
+const TAB_FC_FRAC      = 0.90;   // available chlorine fraction by weight
+const TAB_PPM_PER_LB   = 12;     // 1 lb per 10,000 gal
+const TAB_CYA_PPM_10K  = (TAB_WEIGHT_OZ/16) * TAB_CYA_FRAC * TAB_PPM_PER_LB;  // 3.24
+const TAB_FC_PPM_10K   = (TAB_WEIGHT_OZ/16) * TAB_FC_FRAC  * TAB_PPM_PER_LB;  // 5.40
+const TAB_CYA_WARN     = 60;     // amber
+const TAB_CYA_ALARM    = 70;     // red
+
+/* Live note under the Chlorine Tabs field: what this tab will do to THIS pool.
+   Display only. Never enters the dose engine (the handler is tabNote, not doCalc). */
+function tabNote(){
+  const el=document.getElementById('vtab-note');
+  if(!el)return;
+  const n=parseFloat(gv('vtab'));
+  const cid=parseInt(document.getElementById('vc').value);
+  const c=DB.clients.find(x=>x.id===cid);
+  if(isNaN(n)||n<=0||!c){el.style.display='none';el.innerHTML='';updFloatCam();return;}
+  const gal=parseFloat(c.gal);
+  if(isNaN(gal)||gal<=0){
+    el.innerHTML='Pool volume not set, cannot estimate what the tab adds.';
+    el.style.display='block';updFloatCam();return;
+  }
+  const s=10000/gal;
+  const cy=(TAB_CYA_PPM_10K*n*s).toFixed(1);
+  const fcx=(TAB_FC_PPM_10K*n*s).toFixed(1);
+  const w=n===1?'1 tab':n+' tabs';
+  el.innerHTML=w+': about '+cy+' ppm stabilizer (permanent) and about '+fcx+' ppm chlorine released over the next several days. This is on top of the liquid dose above.';
+  el.style.display='block';
+  updFloatCam();
+}
+
+/* Running stabilizer tally: last measured CYA anchor plus every tab logged since.
+   Pure function of DB. Writes nothing. Mirrors carriedVals' sort and dcya-then-cya
+   preference exactly. Tabs logged AT the anchor visit COUNT (>=): they dissolved after
+   that visit's sample was drawn. Tabs before the anchor are already in the reading. */
+function tabCYAEst(cid){
+  const c=DB.clients.find(x=>x.id===cid);
+  if(!c)return{ok:false,reason:'novol'};
+  const gal=parseFloat(c.gal);
+  if(isNaN(gal)||gal<=0)return{ok:false,reason:'novol'};
+  const vs=DB.visits.filter(v=>v.cid===cid&&!v.skip).sort((a,b)=>((b.dt||'').localeCompare(a.dt||''))||((b.mt||0)-(a.mt||0)));
+  let anchor=null;
+  for(const v of vs){
+    for(const f of ['dcya','cya']){
+      const x=parseFloat(v[f]);
+      if(!isNaN(x)&&x>0){anchor={v:x,dt:v.dt};break;}
+    }
+    if(anchor)break;
+  }
+  if(!anchor)return{ok:false,reason:'nocya'};
+  let tabs=0;
+  vs.forEach(v=>{if((v.dt||'')>=(anchor.dt||''))tabs+=parseFloat(v.tab)||0;});
+  const added=TAB_CYA_PPM_10K*tabs*(10000/gal);
+  return{ok:true,anchorVal:anchor.v,anchorDt:anchor.dt,tabs:tabs,added:added,est:anchor.v+added};
+}
+
+/* The field flag. Silent unless tabs have actually been logged since the last CYA test. */
+function tabFlagHtml(cid){
+  const r=tabCYAEst(cid);
+  if(!r.ok||r.tabs<=0)return '';
+  const est=Math.round(r.est);
+  const w=r.tabs===1?'1 tab':r.tabs+' tabs';
+  let msg='🧪 Stabilizer estimate: tested '+r.anchorVal+' on '+lsiFmtDate(r.anchorDt)+', plus '+w+' since, about '+est+' now.';
+  if(est>=TAB_CYA_ALARM)return _flagBox(msg+' Well over range. Test CYA and plan a drain.','red');
+  if(est>=TAB_CYA_WARN)return _flagBox(msg+' Above the 40-60 range. Time to test CYA.');
+  return _flagBox(msg,'gray');
+}
+
 function fieldFlagsHtml(cid){
   if(isNaN(cid))return '';
   let h=filterDueFlag(cid);
   waterWatchLocal(cid).forEach(m=>{h+=_flagBox('💧 '+m);});
+  h+=tabFlagHtml(cid);
   return h;
 }
 /* ═══ v7.6: STORM LINE (morning kickoff only) ═══ */
@@ -1143,7 +1217,7 @@ function doClearPhotos(){
 
 /* ═══════════ END VISIT FLOW ═══════════ */
 function hasVisitContent(){
-  const fields=['vtemp','vfc','vph','valk','vch','vcya','vsalt','vphos','vtds','vcla','vacid','vbic','vcyaa','vsalta','vcacl','vpr','vother','vsvo','vntc','vnvn','vofn'];
+  const fields=['vtemp','vfc','vph','valk','vch','vcya','vsalt','vphos','vtds','vcla','vacid','vbic','vcyaa','vsalta','vcacl','vpr','vtab','vother','vsvo','vntc','vnvn','vofn'];
   if(fields.some(f=>{const e=document.getElementById(f);return e&&e.value;}))return true;
   const boxes=['vbr','vtb','vva','vskm','vbw','vsk','vpb','vpi','vltg'];
   if(boxes.some(f=>{const e=document.getElementById(f);return e&&e.checked;}))return true;
@@ -1195,7 +1269,7 @@ function updVisitHeader(){
 /* ═══════════ FLOATING CAMERA ═══════════ */
 let _camMode=null; // null = auto, 'b' or 'a' = user override
 function camAutoMode(){
-  const chems=['vcla','vacid','vbic','vcyaa','vsalta','vcacl','vpr'];
+  const chems=['vcla','vacid','vbic','vcyaa','vsalta','vcacl','vpr','vtab'];
   return chems.some(f=>{const e=document.getElementById(f);return e&&e.value;})?'a':'b';
 }
 function updFloatCam(){
@@ -1305,7 +1379,7 @@ function saveDraft(){
       vtemp:gv('vtemp'),vfc:gv('vfc'),vph:gv('vph'),valk:gv('valk'),
       vch:gv('vch'),vcya:gv('vcya'),vsalt:gv('vsalt'),vphos:gv('vphos'),vtds:gv('vtds'),
       vcla:gv('vcla'),vacid:gv('vacid'),vbic:gv('vbic'),vcyaa:gv('vcyaa'),
-      vsalta:gv('vsalta'),vcacl:gv('vcacl'),vpr:gv('vpr'),vother:gv('vother'),
+      vsalta:gv('vsalta'),vcacl:gv('vcacl'),vpr:gv('vpr'),vtab:gv('vtab'),vother:gv('vother'),
       vbr:document.getElementById('vbr').checked,
       vtb:document.getElementById('vtb').checked,
       vva:document.getElementById('vva').checked,
@@ -1350,7 +1424,7 @@ function restoreDraft(){
     document.getElementById('vc').value=d.cid||'';
     if(d.cid)onVC();
     ['vtemp','vfc','vph','valk','vch','vcya','vsalt','vphos','vtds',
-     'vcla','vacid','vbic','vcyaa','vsalta','vcacl','vpr','vother',
+     'vcla','vacid','vbic','vcyaa','vsalta','vcacl','vpr','vtab','vother',
      'vsvo','vntc','vnvn','vofn'].forEach(f=>{const e=document.getElementById(f);if(e)e.value=d[f]||'';});
     ['vbr','vtb','vva','vskm','vbw','vsk','vpb','vpi','vltg'].forEach(f=>{const e=document.getElementById(f);if(e)e.checked=!!d[f];});
     photosBefore=d.ph2b||[];photosAfter=d.ph2a||[];rPh();
@@ -2257,7 +2331,7 @@ function getVD(){
   const durMin=window._visitStartMs?Math.max(0,Math.round((_endMs-window._visitStartMs)/60000)):null;
   return{vid:'v'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),mt:Date.now(),cid:parseInt(document.getElementById('vc').value),dt:localDate(),tm:tend,tstart:window._visitStart||null,tend,dur:durMin,
     temp:gv('vtemp'),fc:gv('vfc'),ph:gv('vph'),alk:gv('valk'),ch:gv('vch'),cya:gv('vcya'),salt:gv('vsalt'),phos:gv('vphos'),tds:gv('vtds'),lsi:lsi,lsix:window._lsiCarried||null,
-    cla:gv('vcla'),acid:gv('vacid'),bic:gv('vbic'),cyaa:gv('vcyaa'),salta:gv('vsalta'),cacl:gv('vcacl'),pr:gv('vpr'),oth:gv('vother'),
+    cla:gv('vcla'),acid:gv('vacid'),bic:gv('vbic'),cyaa:gv('vcyaa'),salta:gv('vsalta'),cacl:gv('vcacl'),pr:gv('vpr'),tab:gv('vtab'),oth:gv('vother'),
     br:document.getElementById('vbr').checked,tb:document.getElementById('vtb').checked,va:document.getElementById('vva').checked,skm:document.getElementById('vskm').checked,bw:document.getElementById('vbw').checked,sk:document.getElementById('vsk').checked,pb:document.getElementById('vpb').checked,pi:document.getElementById('vpi').checked,
     svo:gv('vsvo'),ltg:document.getElementById('vltg').checked,mdec:window._mdec||null,ntc:gv('vntc'),nvn:gv('vnvn'),ofn:gv('vofn'),ofnDone:false,ph2b:[...photosBefore],ph2a:[...photosAfter],sent:false};
 }
@@ -2605,7 +2679,7 @@ function showVisitDetail(v){
   </table></div>`;
 
   // Chemicals Added
-  const hasChems=v.cla||v.acid||v.bic||v.cyaa||v.salta||v.cacl||v.pr||v.oth;
+  const hasChems=v.cla||v.acid||v.bic||v.cyaa||v.salta||v.cacl||v.pr||v.tab||v.oth;
   if(hasChems){
     h+=`<div class="cd"><div class="ch">Chemicals Added</div><div style="font-size:13px;line-height:2;">`;
     if(v.cla)h+=`Liquid Chlorine: <strong>${v.cla} gal</strong><br>`;
@@ -2615,6 +2689,7 @@ function showVisitDetail(v){
     if(v.salta)h+=`Salt: <strong>${v.salta} lbs</strong><br>`;
     if(v.cacl)h+=`Calcium Chloride: <strong>${v.cacl} lbs</strong><br>`;
     if(v.pr)h+=`Phosphate Remover: <strong>${v.pr} oz</strong><br>`;
+    if(v.tab)h+=`Chlorine Tabs (3 in): <strong>${v.tab}</strong><br>`;
     if(v.oth)h+=`Other: <strong>${v.oth}</strong><br>`;
     h+=`</div></div>`;
   }
@@ -2789,6 +2864,7 @@ function editVisit(){
   document.getElementById('ev-salta').value=v.salta||'';
   document.getElementById('ev-cacl').value=v.cacl||'';
   document.getElementById('ev-pr').value=v.pr||'';
+  document.getElementById('ev-tab').value=v.tab||'';
   document.getElementById('ev-oth').value=v.oth||'';
   document.getElementById('ev-br').checked=!!v.br;
   document.getElementById('ev-tb').checked=!!v.tb;
@@ -2816,7 +2892,7 @@ function saveEditVisit(){
   v.temp=gv('ev-temp');v.fc=gv('ev-fc');v.ph=gv('ev-ph');v.alk=gv('ev-alk');
   v.ch=gv('ev-ch');v.cya=gv('ev-cya');v.salt=gv('ev-salt');v.phos=gv('ev-phos');v.tds=gv('ev-tds');
   v.cla=gv('ev-cla');v.acid=gv('ev-acid');v.bic=gv('ev-bic');v.cyaa=gv('ev-cyaa');
-  v.salta=gv('ev-salta');v.cacl=gv('ev-cacl');v.pr=gv('ev-pr');v.oth=gv('ev-oth');
+  v.salta=gv('ev-salta');v.cacl=gv('ev-cacl');v.pr=gv('ev-pr');v.tab=gv('ev-tab');v.oth=gv('ev-oth');
   v.br=document.getElementById('ev-br').checked;
   v.tb=document.getElementById('ev-tb').checked;
   v.va=document.getElementById('ev-va').checked;
@@ -2960,6 +3036,17 @@ function buildNarrative(v,c){
   if(v.salta)parts.push('We added salt to keep your chlorine generator working in its ideal range.');
   if(v.cacl)parts.push('We raised the calcium hardness, which protects your pool surfaces and keeps the water balanced.');
   if(v.pr)parts.push('We treated for phosphates, removing a food source that algae relies on.');
+  if(v.tab&&parseFloat(v.tab)>0){
+    const tn=parseFloat(v.tab);
+    const tw=tn===1?'1 chlorine tab':tn+' chlorine tabs';
+    const tg=c?parseFloat(c.gal):NaN;
+    if(!isNaN(tg)&&tg>0){
+      const ts=10000/tg;
+      parts.push('We added '+tw+' to your floater this week, which should slowly raise your chlorine by about '+(TAB_FC_PPM_10K*tn*ts).toFixed(1)+' ppm and your stabilizer by about '+(TAB_CYA_PPM_10K*tn*ts).toFixed(1)+' ppm over the next week.');
+    }else{
+      parts.push('We added '+tw+' to your floater this week for slow, steady chlorination between visits.');
+    }
+  }
   if(parts.length===0)return 'Your water tested in good shape today, so no chemical adjustments were needed. We completed your regular service and your pool is ready to enjoy.';
   return parts.join(' ');
 }
@@ -4131,7 +4218,7 @@ function exportXLSX(){
   }
   const vHeaders=['Visit ID','Client ID','Date','Start Time','End Time','Duration','Client','Address',
     'Temp °F','FC ppm','pH','Alk ppm','CH ppm','CYA ppm','Salt ppm','Phosphates ppb','TDS','LSI','LSI Status',
-    'Cl Added gal','Acid gal','Bicarb lbs','CYA lbs','Salt lbs','CaCl lbs','Phos Rem oz','Other Chems',
+    'Cl Added gal','Acid gal','Bicarb lbs','CYA lbs','Salt lbs','CaCl lbs','Phos Rem oz','Chlorine Tabs','Other Chems',
     'Dep FC ppm','Dep pH','Dep Alk ppm','Dep CH ppm','Dep CYA ppm','Dep Salt ppm','Dep LSI','Water Status',
     'Weather Rate ppm/day','Measured Decay ppm/day','Lightning',
     'Brushed','Tile Brushed','Vacuumed','Skimmed','BW/Filter','Skimmer Baskets','Pump Basket','Pad Inspect','Other Service',
@@ -4144,7 +4231,7 @@ function exportXLSX(){
     return[v.vid||'',v.cid,v.dt,v.tstart||'',v.tm||'',dur,c?c.ln+', '+c.fn:'',c?c.ad:'',
       v.temp?+v.temp:'',v.fc?+v.fc:'',v.ph?+v.ph:'',v.alk?+v.alk:'',v.ch?+v.ch:'',v.cya?+v.cya:'',v.salt?+v.salt:'',v.phos?+v.phos:'',v.tds?+v.tds:'',
       v.lsi!==null&&v.lsi!==undefined?+v.lsi.toFixed(2):'',v.lsi!==null&&v.lsi!==undefined?ll(v.lsi):'',
-      v.cla?+v.cla:'',v.acid?+v.acid:'',v.bic?+v.bic:'',v.cyaa?+v.cyaa:'',v.salta?+v.salta:'',v.cacl?+v.cacl:'',v.pr?+v.pr:'',v.oth||'',
+      v.cla?+v.cla:'',v.acid?+v.acid:'',v.bic?+v.bic:'',v.cyaa?+v.cyaa:'',v.salta?+v.salta:'',v.cacl?+v.cacl:'',v.pr?+v.pr:'',v.tab?+v.tab:'',v.oth||'',
       nn(d.dfc),nn(d.dph),nn(d.dalk),nn(d.dch),nn(d.dcya),nn(d.dslt),nn(d.dlsi),d.wst||'',
       nn(v.wxr),v.mdec?+v.mdec:'',v.ltg?'Y':'N',
       v.br?'Y':'N',v.tb?'Y':'N',v.va?'Y':'N',v.skm?'Y':'N',v.bw?'Y':'N',v.sk?'Y':'N',v.pb?'Y':'N',v.pi?'Y':'N',v.svo||'',
@@ -4472,7 +4559,8 @@ const PPP_CHEMS=[
   {field:'cyaa',label:'Stabilizer (CYA)',unit:'lb',packDefault:1,packWord:'lb'},
   {field:'cacl',label:'Calcium Chloride',unit:'lb',packDefault:1,packWord:'lb'},
   {field:'salta',label:'Salt',unit:'lb',packDefault:40,packWord:'bag'},
-  {field:'pr',label:'Phosphate Remover',unit:'oz',packDefault:null,packWord:'bottle'}
+  {field:'pr',label:'Phosphate Remover',unit:'oz',packDefault:null,packWord:'bottle'},
+  {field:'tab',label:'Chlorine Tabs (3 in)',unit:'tab',packDefault:50,packWord:'bucket'}
 ];
 function pppGet(){try{const s=JSON.parse(localStorage.getItem(PPP_KEY));if(s&&s.prices)return s;}catch(e){}return{prices:{}};}
 function pppSave(s){try{localStorage.setItem(PPP_KEY,JSON.stringify(s));}catch(e){}}
