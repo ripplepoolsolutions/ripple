@@ -259,7 +259,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:14px;">⚠️ Pool Volume (Required for Dosing)</div>
 <div class="fr"><div class="fg"><label class="fl">Pool Gallons *</label><input type="number" class="fi" id="cgal" placeholder="e.g. 15000" style="border-color:var(--teal);font-weight:600;font-size:18px;text-align:center;"></div><div class="fg"><label class="fl">Pool Type</label><select class="fs" id="cpt"><option>Inground</option><option>Above Ground</option></select></div></div>
 <div class="fr"><div class="fg"><label class="fl">Chlorination</label><select class="fs" id="cslp" onchange="togSalt()"><option>Regular Chlorine</option><option>Salt Pool</option></select></div><div class="fg" id="salt-target-wrap" style="display:none;"><label class="fl">Target Salt (ppm)</label><input type="number" class="fi" id="cslt" value="3200" placeholder="3200"></div></div>
-<div class="fr"><div class="fg"><label class="fl">Borates (ppm)</label><input type="number" class="fi" id="cbor" placeholder="0 = none"></div><div class="fg"></div></div>
+<div class="fr"><div class="fg"><label class="fl">Borates (ppm as boron)</label><input type="number" class="fi" id="cbor" placeholder="0 = none"></div><div class="fg"></div></div>
 </div>
 <div class="cd"><div class="st" onclick="tog(this)">Service <span class="ar">▶</span></div><div class="sc">
 <div class="fr"><div class="fg"><label class="fl">Service Day</label><select class="fs" id="cdy"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select></div><div class="fg"><label class="fl">Frequency</label><select class="fs" id="cfq"><option>Weekly</option><option>Biweekly</option><option>Monthly</option></select></div></div>
@@ -412,7 +412,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.10';
+const APP_VER='v7.11';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -1973,6 +1973,11 @@ function calcDose(){
   if(!gal||gal<=0){dp.innerHTML='<div class="dose"><h3>⚠️ No Pool Volume</h3><div style="font-size:13px;opacity:0.8;">Edit this client and enter pool gallons to get dosing recommendations.</div></div>';return;}
 
   const fc=pf('vfc'),ph=pf('vph'),alk=pf('valk'),ch=pf('vch'),cya=pf('vcya'),salt=pf('vsalt'),phos=pf('vphos'),temp=pf('vtemp'),tds=pf('vtds');
+  // v7.11: this pool's borate level (ppm as boron), 0 when absent. Borates register on a
+  // TA test but are not carbonate alkalinity, so every LSI evaluation in this function
+  // must see them or it reads LSI too high and under-doses bicarb. Matches the bor
+  // argument already passed at every display and record call site since v7.6.
+  const bor=(cl&&parseFloat(cl.bor))||0;
   if(isNaN(fc)&&isNaN(ph)&&isNaN(alk)&&isNaN(cya)){updDosePH({});dp.innerHTML='';return;}
 
   const caged=cl.cg==='Yes';
@@ -2124,14 +2129,14 @@ function calcDose(){
   // Cap: only suggest corrections that keep alk within normal range (max 120 ppm)
   // and pH within normal range (min 7.0)
   if(!isNaN(temp)&&!isNaN(pPH)&&!isNaN(pALK)&&!isNaN(pCH)){
-    let projL=doLSI(temp,pPH,pALK,pCH,pCYA,tds);
+    let projL=doLSI(temp,pPH,pALK,pCH,pCYA,tds,bor);
 
     // If LSI too low, try raising alk — but only up to 120 ppm max
     if(projL<-0.3&&pALK<120){
       let testAlk=pALK;
       while(testAlk<120){
         testAlk+=10;
-        const testL=doLSI(temp,pPH,testAlk,pCH,pCYA,tds);
+        const testL=doLSI(temp,pPH,testAlk,pCH,pCYA,tds,bor);
         if(testL>=-0.1){break;}
       }
       testAlk=Math.min(testAlk,120);
@@ -2140,7 +2145,7 @@ function calcDose(){
         const extraOz=Math.round(extraAlk/10*2.24*k);
         const extraLbs=(extraOz/16).toFixed(1);
         const extraScoops=Math.ceil(extraOz/16/3);
-        const newL=doLSI(temp,pPH,testAlk,pCH,pCYA,tds);
+        const newL=doLSI(temp,pPH,testAlk,pCH,pCYA,tds,bor);
         recBic+=parseFloat(extraLbs);
         pALK=testAlk;
         rows.push({l:'⚖️ LSI Balance — More Bicarb',a:extraLbs+' lbs ('+extraScoops+' scoop'+(extraScoops>1?'s':'')+')',n:'Raise alk +'+Math.round(extraAlk)+' ppm → '+Math.round(testAlk)+' ppm',d:'Improves LSI from '+projL.toFixed(2)+' → '+newL.toFixed(2)});
@@ -2157,7 +2162,7 @@ function calcDose(){
       let testPH=pPH;
       while(testPH>7.0){
         testPH=Math.round((testPH-0.1)*10)/10;
-        const testL=doLSI(temp,testPH,pALK,pCH,pCYA,tds);
+        const testL=doLSI(temp,testPH,pALK,pCH,pCYA,tds,bor);
         if(testL<=0.1){break;}
       }
       testPH=Math.max(testPH,7.0);
@@ -2165,7 +2170,7 @@ function calcDose(){
       if(extraDrop>=0.1){
         const extraOz=Math.round(extraDrop/0.2*1.1*k);
         const extraGal=(extraOz/128).toFixed(2);
-        const newL=doLSI(temp,testPH,pALK,pCH,pCYA,tds);
+        const newL=doLSI(temp,testPH,pALK,pCH,pCYA,tds,bor);
         recAcid+=parseFloat(extraGal);
         pPH=testPH;
         rows.push({l:'⚖️ LSI Balance — More Acid',a:extraGal+' gal',n:'Lower pH additional → '+testPH.toFixed(1)+' at departure',d:'Improves LSI from '+projL.toFixed(2)+' → '+newL.toFixed(2)});
@@ -2192,8 +2197,8 @@ function calcDose(){
 
   let projLSI=null, curLSI=null;
   if(!isNaN(temp)&&!isNaN(aPH)&&!isNaN(aALK)&&!isNaN(aCH)){
-    curLSI=doLSI(temp,ph,alk,ch,cya,tds);
-    projLSI=doLSI(temp,aPH,aALK,aCH,isNaN(aCYA)?0:aCYA,tds);
+    curLSI=doLSI(temp,ph,alk,ch,cya,tds,bor);
+    projLSI=doLSI(temp,aPH,aALK,aCH,isNaN(aCYA)?0:aCYA,tds,bor);
   }
 
   updDosePH({cla:recCla,acid:recAcid,bic:recBic,cyaa:recCyaa,salta:recSalta,cacl:recCacl});
