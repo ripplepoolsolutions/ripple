@@ -141,7 +141,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
   <path fill="#06bab5" d="M937.58,846.9v2.79c0,.38-.34.68-.72.64l-.41-.05c-.56-.06-.98-.54-.98-1.11v-12.25c0-.28.21-.51.49-.54.44-.03,1.55-.02,3.31.03,3.28.11,6.62.15,6.82,4.37.22,4.93-3.63,5.22-7.54,5.17-.53-.01-.96.42-.96.95M937.66,838.96l-.02,4.43c0,.33.25.59.58.59h2.5c1.67.02,3.04-1.07,3.05-2.42v-.68c.01-1.37-1.34-2.47-3.03-2.48h-2.5c-.32-.01-.58.24-.58.56h0Z"/>
   <path fill="#06bab5" d="M956.97,847.98c.49,0,.89.4.89.89v.43c0,.42-.35.77-.78.77h-7.15c-.38,0-.69-.31-.69-.68v-12.23c0-.44.36-.8.8-.8h.33c.62,0,1.13.51,1.13,1.14v9.69c0,.43.36.78.79.78h4.67Z"/>
   <path fill="#06bab5" d="M969.43,843.17c.18.86-1.63,1.16-5.41.92-.87-.06-1.61.62-1.61,1.5v1.08c0,.75.6,1.37,1.36,1.37h5.91c.3,0,.53.22.55.52l.03.36c.04.49-.34.9-.83.92l-8.17.21c-.38.01-.7-.28-.72-.66-.01-.14-.02-2.2-.04-6.18-.02-3.97-.03-6.03-.02-6.18.02-.37.34-.67.72-.66l8.17.13c.49.01.87.43.84.92l-.03.36c-.02.29-.25.52-.55.52l-5.91.06c-.74,0-1.34.62-1.33,1.38v1.08c.02.88.76,1.56,1.63,1.49,3.78-.29,5.59,0,5.42.86h0Z"/>
-</svg></div><div class="tbtn"><button class="tb" onclick="openM('mo-menu')">☰</button><button class="tb" onclick="dlBackup()">💾</button><button class="tb" onclick="document.getElementById('rfile').click()">📂</button><button class="tb" onclick="exportXLSX()">📊 Excel</button></div></div>
+</svg></div><div class="tbtn"><button class="tb" onclick="openM('mo-menu')">☰</button></div></div>
 <input type="file" id="rfile" accept=".json" style="display:none" onchange="restoreB(this)">
 <div class="toast" id="toast"></div>
 
@@ -401,8 +401,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 <div class="mo" id="mo-phr"><div class="ml"><div class="mh"><span id="phr-title">Pool Health Report</span><button class="mx" onclick="closeM('mo-phr')">&times;</button></div><div class="fg"><label class="fl">Reporting Period</label><select class="fs" id="phr-period" onchange="phrPeriodChange()"></select></div><div id="phr-custom" style="display:none;gap:10px;margin-bottom:12px;"><div style="flex:1;"><label class="fl">From</label><input type="date" class="fi" id="phr-from" onchange="phrCustomChange()"></div><div style="flex:1;"><label class="fl">To</label><input type="date" class="fi" id="phr-to" onchange="phrCustomChange()"></div></div><div id="phr-con"></div><button class="btn bp" id="phr-email-btn" onclick="phrEmailMe()" style="display:none;margin-top:12px;">📧 Email Me a Review Copy</button></div></div>
 <div class="mo" id="mo-truck"><div class="ml"><div class="mh"><span>🚚 Truck Load</span><button class="mx" onclick="closeM('mo-truck')">&times;</button></div><div id="truck-con"></div></div></div>
 <div class="mo" id="mo-ppp"><div class="ml"><div class="mh"><span>💰 Profit per Pool</span><button class="mx" onclick="closeM('mo-ppp')">&times;</button></div><div id="ppp-con"></div></div></div>
-<div class="mo" id="mo-menu"><div class="ml"><div class="mh"><span>☰ Menu</span><button class="mx" onclick="closeM('mo-menu')">&times;</button></div><button class="btn bs" style="width:100%;margin-bottom:8px;" onclick="closeM('mo-menu');openTruck()">🚚 Truck Load</button><button class="btn bs" style="width:100%;margin-bottom:8px;" onclick="closeM('mo-menu');openPPP()">💰 Profit per Pool</button><button class="btn bs" style="width:100%;" onclick="closeM('mo-menu');openM('mo-data')">🗄 Data Management</button></div></div>
-<div class="mo" id="mo-data"><div class="ml"><div class="mh"><span>🗄 Data Management</span><button class="mx" onclick="closeM('mo-data')">&times;</button></div><div class="cd" style="padding:12px 16px;"><div class="ch" style="margin-bottom:8px;">Data Management</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span id="storage-lbl" style="font-size:11px;color:var(--g400);">Storage: calculating...</span><span id="storage-visit-count" style="font-size:11px;color:var(--g400);"></span></div><div style="background:var(--g100);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;"><div id="storage-bar" style="height:100%;border-radius:4px;background:var(--teal);width:0%;transition:width 0.5s;"></div></div><div style="display:flex;gap:8px;margin-bottom:8px;"><button onclick="dlBackup()" style="flex:1;border:1px solid var(--teal);background:none;color:var(--teal);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💾 Back Up</button><button onclick="showPurgeMo()" style="flex:1;border:1px solid var(--gold);background:none;color:var(--gold);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Trim Old Visits</button></div><div style="display:flex;gap:8px;"><button onclick="showClearPhotos()" style="flex:1;border:1px solid var(--red);background:none;color:var(--red);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🧹 Clear All Photos</button></div><div style="display:flex;gap:8px;margin-top:8px;align-items:stretch;"><button onclick="syncNow(false)" style="flex:1;border:none;background:var(--navy);color:white;border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Sync Now</button><button onclick="openSyncSetup()" style="width:46px;border:1px solid var(--g200);background:none;color:var(--g600);border-radius:8px;padding:9px;font-size:14px;cursor:pointer;">⚙️</button></div><div id="sync-status" style="font-size:11px;color:var(--g400);margin-top:6px;text-align:center;">Sync not set up — tap ⚙️</div></div></div></div>
+<div class="mo" id="mo-menu"><div class="ml"><div class="mh"><span>☰ Menu</span><button class="mx" onclick="closeM('mo-menu')">&times;</button></div><button class="btn bs" style="width:100%;margin-bottom:8px;" onclick="closeM('mo-menu');openTruck()">🚚 Truck Load</button><button class="btn bs" style="width:100%;margin-bottom:8px;" onclick="closeM('mo-menu');openPPP()">💰 Profit per Pool</button><button class="btn bs" style="width:100%;margin-bottom:8px;" onclick="closeM('mo-menu');phrbOpen()">📊 Pool Health (all pools)</button><button class="btn bs" style="width:100%;" onclick="closeM('mo-menu');openM('mo-data')">🗄 Data Management</button></div></div>
+<div class="mo" id="mo-data"><div class="ml"><div class="mh"><span>🗄 Data Management</span><button class="mx" onclick="closeM('mo-data')">&times;</button></div><div class="cd" style="padding:12px 16px;"><div class="ch" style="margin-bottom:8px;">Data Management</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span id="storage-lbl" style="font-size:11px;color:var(--g400);">Storage: calculating...</span><span id="storage-visit-count" style="font-size:11px;color:var(--g400);"></span></div><div style="background:var(--g100);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;"><div id="storage-bar" style="height:100%;border-radius:4px;background:var(--teal);width:0%;transition:width 0.5s;"></div></div><div style="display:flex;gap:8px;margin-bottom:8px;"><button onclick="dlBackup()" style="flex:1;border:1px solid var(--teal);background:none;color:var(--teal);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💾 Back Up</button><button onclick="showPurgeMo()" style="flex:1;border:1px solid var(--gold);background:none;color:var(--gold);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Trim Old Visits</button></div><div style="display:flex;gap:8px;margin-bottom:8px;"><button onclick="document.getElementById('rfile').click()" style="flex:1;border:1px solid var(--teal);background:none;color:var(--teal);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Restore</button><button onclick="exportXLSX()" style="flex:1;border:1px solid var(--navy);background:none;color:var(--navy);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📊 Excel Export</button></div><div style="display:flex;gap:8px;"><button onclick="showClearPhotos()" style="flex:1;border:1px solid var(--red);background:none;color:var(--red);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🧹 Clear All Photos</button></div><div style="display:flex;gap:8px;margin-top:8px;align-items:stretch;"><button onclick="syncNow(false)" style="flex:1;border:none;background:var(--navy);color:white;border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Sync Now</button><button onclick="openSyncSetup()" style="width:46px;border:1px solid var(--g200);background:none;color:var(--g600);border-radius:8px;padding:9px;font-size:14px;cursor:pointer;">⚙️</button></div><div id="sync-status" style="font-size:11px;color:var(--g400);margin-top:6px;text-align:center;">Sync not set up — tap ⚙️</div></div>
+<div class="mo" id="mo-phrb"><div class="ml"><div class="mh"><span>📊 Pool Health: All Pools</span><button class="mx" onclick="closeM('mo-phrb')">&times;</button></div><div class="fg"><label class="fl">Reporting Period</label><select class="fs" id="phrb-period" onchange="phrbPeriodChange()"></select></div><div id="phrb-custom" style="display:none;gap:10px;margin-bottom:12px;"><div style="flex:1;"><label class="fl">From</label><input type="date" class="fi" id="phrb-from" onchange="phrbCustomChange()"></div><div style="flex:1;"><label class="fl">To</label><input type="date" class="fi" id="phrb-to" onchange="phrbCustomChange()"></div></div><div id="phrb-con"></div></div></div></div></div>
 
 <nav class="bnav">
 <button class="ni act" onclick="nav('dash',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Home</button>
@@ -414,7 +415,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.14';
+const APP_VER='v7.15';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -3918,6 +3919,84 @@ function phrMeterHTML(mean){
 
 // ── Modal flow ──
 let _phrLast=null;
+/* v7.15 BATCH POOL HEALTH: internal-only, PURE READ roster-wide table. Reuses
+   phrPoints/phrScore UNTOUCHED; same thin-history floors as the single report; writes
+   NOTHING. Worst score on top (the profit ledger convention). Tap a row to open that
+   pool's full single report. */
+function phrbQuarters(){
+  const seen={};const out=[];
+  DB.visits.filter(v=>!v.skip&&v.dt).forEach(v=>{
+    const y=+v.dt.slice(0,4),m=+v.dt.slice(5,7);
+    if(!y||!m)return;
+    const q=Math.floor((m-1)/3)+1;const k=y+'-'+q;
+    if(!seen[k]){seen[k]=1;out.push({y:y,q:q});}
+  });
+  out.sort((a,b)=>(b.y-a.y)||(b.q-a.q));
+  return out;
+}
+function phrbRows(from,to){
+  const rows=[],thin=[];
+  DB.clients.filter(c=>c.st==='Active').forEach(c=>{
+    const rv=DB.visits.filter(v=>v.cid===c.id&&!v.skip&&(v.dt||'')>=from&&(v.dt||'')<=to);
+    const chAnchor=DB.visits.some(v=>v.cid===c.id&&!v.skip&&(v.dt||'')<=to&&(parseFloat(v.ch)>0||parseFloat(v.dch)>0));
+    const score=(rv.length>=PHR_MIN_VISITS&&chAnchor)?phrScore(phrPoints(c,from,to)):null;
+    if(!score){
+      const why=rv.length<PHR_MIN_VISITS?(rv.length+' of '+PHR_MIN_VISITS+' visits'):(!chAnchor?'no CH test yet':'too few computable points');
+      thin.push({c:c,why:why});
+    }else rows.push({c:c,s:score});
+  });
+  rows.sort((a,b)=>(a.s.score-b.s.score)||a.c.ln.localeCompare(b.c.ln));
+  thin.sort((a,b)=>a.c.ln.localeCompare(b.c.ln));
+  return {rows:rows,thin:thin};
+}
+function phrbTierStyle(t){return t==='Excellent'?'background:rgba(6,186,181,0.15);color:var(--teal-dk);':t==='Strong'?'background:rgba(39,174,96,0.15);color:var(--grn);':t==='Steady'?'background:rgba(243,156,18,0.15);color:#b45309;':'background:rgba(232,102,108,0.15);color:var(--red);';}
+function phrbRun(from,to,label){
+  if(!from){
+    const v=document.getElementById('phrb-period').value;
+    if(!v||v==='custom')return;
+    const p=v.split(':');const r=phrQRange(+p[1],+p[2]);
+    from=r.from;to=r.to;label=phrQLabel(+p[1],+p[2]);
+  }
+  const d=phrbRows(from,to);
+  let h='<div style="font-size:12px;color:var(--g600);margin-bottom:10px;">'+label+' · '+d.rows.length+' pool'+(d.rows.length===1?'':'s')+' scored · internal only</div>';
+  if(d.rows.length){
+    h+=d.rows.map(function(r,i){
+      return '<div onclick="phrbView('+r.c.id+')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--g100);cursor:pointer;">'
+        +'<div><div style="font-weight:600;font-size:13px;color:var(--navy);">'+(i+1)+'. '+r.c.ln+', '+r.c.fn+'</div>'
+        +'<div style="font-size:11px;color:var(--g400);">'+bookOf(r.c)+' book · '+r.s.n+' point'+(r.s.n===1?'':'s')+'</div></div>'
+        +'<div style="text-align:right;"><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;'+phrbTierStyle(r.s.tier)+'">'+r.s.tier+'</span>'
+        +'<div style="font-size:11px;color:var(--g400);margin-top:3px;">score '+r.s.score+'</div></div></div>';
+    }).join('');
+  }else h+='<div class="emp">No pools clear the reporting floors for this period yet.</div>';
+  if(d.thin.length){
+    h+='<div style="margin-top:14px;font-weight:600;font-size:12px;color:var(--g600);">Still building history ('+d.thin.length+')</div>';
+    h+=d.thin.map(function(t){return '<div style="font-size:12px;color:var(--g400);padding:6px 0;border-bottom:1px solid var(--g100);">'+t.c.ln+', '+t.c.fn+' · '+t.why+'</div>';}).join('');
+  }
+  document.getElementById('phrb-con').innerHTML=h;
+}
+function phrbOpen(){
+  const qs=phrbQuarters();
+  const sel=document.getElementById('phrb-period');
+  sel.innerHTML=qs.map(x=>'<option value="q:'+x.y+':'+x.q+'">'+phrQLabel(x.y,x.q)+'</option>').join('')+'<option value="custom">Custom range</option>';
+  sel.selectedIndex=0;
+  document.getElementById('phrb-custom').style.display='none';
+  document.getElementById('phrb-from').value='';document.getElementById('phrb-to').value='';
+  if(qs.length)phrbRun();
+  else document.getElementById('phrb-con').innerHTML='<div class="emp">No visit history yet.</div>';
+  openM('mo-phrb');
+}
+function phrbPeriodChange(){
+  const v=document.getElementById('phrb-period').value;
+  const cu=document.getElementById('phrb-custom');
+  if(v==='custom'){cu.style.display='flex';document.getElementById('phrb-con').innerHTML='<div class="emp">Pick a date range above.</div>';return;}
+  cu.style.display='none';
+  phrbRun();
+}
+function phrbCustomChange(){
+  const f=document.getElementById('phrb-from').value,t=document.getElementById('phrb-to').value;
+  if(f&&t&&f<=t)phrbRun(f,t,f+' to '+t);
+}
+function phrbView(cid){vid=cid;closeM('mo-phrb');openPHR();}
 function openPHR(){
   const c=DB.clients.find(x=>x.id===vid);if(!c)return;
   closeM('mo-v');
