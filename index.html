@@ -412,7 +412,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 
 <script>
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.11';
+const APP_VER='v7.13';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -907,7 +907,7 @@ function onWake(){
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(onWake,300);});
 window.addEventListener('pageshow',function(){setTimeout(onWake,300);});
 /* ═══════════ END GUIDED ROUTE FLOW ═══════════ */
-function load(){try{const r=localStorage.getItem(SK);if(r){const p=JSON.parse(r);if(p.clients)DB=p;}}catch(e){}migrate();}
+function load(){try{const r=localStorage.getItem(SK);if(r){const p=JSON.parse(r);if(p.clients)DB=p;}}catch(e){}migrate();adminMigrate();}
 function migrate(){
   // Phase 2 migration: every record needs a stable id + modified-timestamp for merge sync.
   if(!DB.tomb)DB.tomb=[];
@@ -1072,6 +1072,78 @@ if(!SYNC.dev){SYNC.dev='d'+Math.random().toString(36).slice(2,8);saveSync();}
 function saveSync(){try{localStorage.setItem(SYNCK,JSON.stringify(SYNC));}catch(e){}}
 function syncReady(){return !!(SYNC.url&&SYNC.code);}
 let _syncBusy=false;
+/* ── ADMIN SYNC (v7.12) ──────────────────────────────────────────────
+   Cross-device sync of ripple_ppp_v1 (prices) and ripple_truck_v1
+   (capacities, stock baselines, restocks). Rides the existing sync
+   round trip as an 'admin' section; the server merges it into the
+   separate _App Data/ripple_admin.json, never into ripple_master.json.
+   The 'selected' transport is per-device and is never synced.
+   Merge rules (mirrored EXACTLY in Code.gs; keep the two in step):
+   prices per-field newest mt wins; capacities newest block wins;
+   baselines are reset events, newest baselineMt wins and drops any
+   restock whose mt predates it; restocks union by stable rid. */
+function adminRid(){return Date.now()*1000+Math.floor(Math.random()*1000);}
+function adminMigrate(){
+  /* Idempotent in-place upgrade of pre-v7.12 keys: touches only entries
+     missing their sync stamps, so running on every load is harmless. */
+  try{
+    const p=pppGet();let ch=false;
+    Object.keys(p.prices||{}).forEach(k=>{const e=p.prices[k];if(e&&e.mt===undefined){e.mt=0;ch=true;}});
+    if(ch)pppSave(p);
+  }catch(e){}
+  try{
+    const t=tlfGet();let ch=false;
+    if(t.transports&&t.transports.mt===undefined){t.transports.mt=0;ch=true;}
+    Object.keys(t.stock||{}).forEach(k=>{
+      const st=t.stock[k];if(!st)return;
+      if(st.baselineMt===undefined){st.baselineMt=0;ch=true;}
+      (st.restocks||[]).forEach(r=>{
+        if(r.rid===undefined){r.rid=adminRid();ch=true;}
+        if(r.mt===undefined){r.mt=0;ch=true;}
+      });
+    });
+    if(ch)tlfSave(t);
+  }catch(e){}
+}
+function adminMergePpp(A,B){
+  const a=(A&&A.prices)||{},b=(B&&B.prices)||{},out={};
+  const keys={};Object.keys(a).forEach(k=>{keys[k]=1;});Object.keys(b).forEach(k=>{keys[k]=1;});
+  Object.keys(keys).forEach(k=>{
+    const x=a[k],y=b[k];
+    if(x&&!y){out[k]=x;return;}
+    if(y&&!x){out[k]=y;return;}
+    out[k]=((y.mt||0)>(x.mt||0))?y:x;
+  });
+  return{prices:out};
+}
+function adminMergeTruck(A,B){
+  A=A||{};B=B||{};
+  let tr=null;
+  if(A.transports&&!B.transports)tr=A.transports;
+  else if(B.transports&&!A.transports)tr=B.transports;
+  else if(A.transports&&B.transports)tr=((B.transports.mt||0)>(A.transports.mt||0))?B.transports:A.transports;
+  const as=A.stock||{},bs=B.stock||{},out={};
+  /* Union of chemical keys on purpose: future stock chemicals (for example
+     chlorine and acid as total-owned inventory) sync with no merge change. */
+  const keys={};Object.keys(as).forEach(k=>{keys[k]=1;});Object.keys(bs).forEach(k=>{keys[k]=1;});
+  Object.keys(keys).forEach(k=>{
+    const x=as[k],y=bs[k];
+    if(!x&&!y){out[k]=null;return;}
+    if(x&&!y){out[k]=x;return;}
+    if(y&&!x){out[k]=y;return;}
+    const w=((y.baselineMt||0)>(x.baselineMt||0))?y:x;
+    const bmt=w.baselineMt||0;
+    const seen={},un=[];
+    [].concat(x.restocks||[],y.restocks||[]).forEach(r=>{
+      const id=String(r.rid);if(seen[id])return;seen[id]=1;
+      if((r.mt||0)<bmt)return;
+      un.push(r);
+    });
+    un.sort((p,q)=>(p.mt||0)-(q.mt||0));
+    out[k]={baseline:w.baseline,baselineDate:w.baselineDate,baselineMt:bmt,restocks:un};
+  });
+  return{transports:tr,stock:out};
+}
 async function apiCall(body){
   // No Content-Type header on purpose: text/plain avoids the CORS preflight
   // that Google Apps Script web apps cannot answer.
@@ -1096,7 +1168,11 @@ async function syncNow(silent){
       tombs:(DB.tomb||[]).filter(t=>(t.ts||0)>SYNC.lastPush),
       nid:DB.nid
     };
-    const j=await apiCall({action:'sync',since:SYNC.lastSeq,dev:SYNC.dev,push:push});
+    const adminPush={
+      ppp:pppGet(),
+      truck:(function(){const t=tlfGet();return{transports:t.transports,stock:t.stock};})()
+    };
+    const j=await apiCall({action:'sync',since:SYNC.lastSeq,dev:SYNC.dev,push:push,admin:adminPush});
     (j.clients||[]).forEach(rc=>{
       const i=DB.clients.findIndex(c=>c.id===rc.id);
       if(i<0)DB.clients.push(rc);
@@ -1120,6 +1196,19 @@ async function syncNow(silent){
       if(!DB.tomb.some(x=>x.t===t.t&&x.id===t.id))DB.tomb.push({t:t.t,id:t.id,ts:t.ts});
     });
     if(j.nid&&j.nid>DB.nid)DB.nid=j.nid;
+    if(j.admin){
+      /* Merge the returned admin state against CURRENT local state, in case
+         anything was edited during the round trip. selected never syncs. */
+      const mergedPpp=adminMergePpp(pppGet(),j.admin.ppp||{prices:{}});
+      const localTruck=tlfGet();
+      const mergedTruck=adminMergeTruck({transports:localTruck.transports,stock:localTruck.stock},j.admin.truck||{});
+      mergedTruck.selected=localTruck.selected;
+      pppSave(mergedPpp);
+      tlfSave(mergedTruck);
+      try{renderPPPCard();}catch(e){}
+      try{renderTruckCard();}catch(e){}
+      try{truckRun();}catch(e){}
+    }
     SYNC.lastSeq=j.seq||SYNC.lastSeq;
     SYNC.lastPush=t0;
     SYNC.lastOk=Date.now();
@@ -4310,10 +4399,10 @@ const TLF_SALT_BAG_LBS=40;
 const TLF_SALT_FLOOR_BAGS=2;        // salt reorders at 2 bags remaining
 const TLF_GORMAN_DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday']; // Gorman open days, independent of route days
 const TLF_KEY='ripple_truck_v1';
-const TLF_STOCK_META={bic:{nm:'Bicarb'},cyaa:{nm:'Stabilizer (CYA)'},cacl:{nm:'Calcium Chloride'},salta:{nm:'Salt'}};
+const TLF_STOCK_META={cla:{nm:'Liquid Chlorine'},acid:{nm:'Muriatic Acid'},bic:{nm:'Bicarb'},cyaa:{nm:'Stabilizer (CYA)'},cacl:{nm:'Calcium Chloride'},salta:{nm:'Salt'}};
 function tlfGet(){
   try{const s=JSON.parse(localStorage.getItem(TLF_KEY));if(s&&s.transports&&s.stock)return s;}catch(e){}
-  return{transports:{truck:{chlorineJugs:null,acidJugs:null},trailer:{chlorineJugs:32,acidJugs:12}},selected:'trailer',stock:{bic:null,cyaa:null,cacl:null,salta:null}};
+  return{transports:{truck:{chlorineJugs:null,acidJugs:null},trailer:{chlorineJugs:32,acidJugs:12},mt:-1},selected:'trailer',stock:{bic:null,cyaa:null,cacl:null,salta:null}};
 }
 function tlfSave(s){try{localStorage.setItem(TLF_KEY,JSON.stringify(s));}catch(e){}}
 /* Roster-derived first route day: mirror of lastServiceDayName. Never hardcoded. */
@@ -4386,6 +4475,13 @@ function tlfStockRow(chem){
   const base=parseFloat(st.baseline)||0;
   const rest=(st.restocks||[]).reduce((a,r)=>a+(parseFloat(r.amount)||0),0);
   const remaining=base+rest-tlfConsumed(chem,st.baselineDate||'0000-00-00');
+  if(chem==='cla'||chem==='acid'){
+    /* Liquids are a total-owned countdown (truck plus trailer plus home).
+       Lowness is judged by tlfDayOutlook against the route ahead, not by a
+       percentage of the baseline. */
+    const jug=(chem==='cla')?TLF_CHLORINE_JUG_GAL:TLF_ACID_JUG_GAL;
+    return{chem:chem,remaining:remaining,jugs:remaining/jug,low:false};
+  }
   if(chem==='salta'){
     const bags=remaining/TLF_SALT_BAG_LBS;
     return{chem:chem,remaining:remaining,bags:bags,low:bags<=TLF_SALT_FLOOR_BAGS};
@@ -4399,24 +4495,86 @@ function tlfBagWord(b){return Math.abs(b-1)<0.05?'bag':'bags';}
 function tlfRestock(chem,amt){
   const s=tlfGet();const st=s.stock[chem];if(!st)return;
   st.restocks=st.restocks||[];
-  st.restocks.push({amount:amt,date:localDate()});
+  st.restocks.push({rid:adminRid(),amount:amt,date:localDate(),mt:Date.now()});
   tlfSave(s);try{truckRun();}catch(e){}try{renderTruckCard();}catch(e){}
+}
+/* Roster-derived NEXT route day strictly after today, wrapping into next week.
+   Mirror of firstServiceDayName's derivation. Never hardcoded. */
+function tlfNextRouteDayName(now){
+  const order=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const days={};DB.clients.forEach(c=>{if(c.st==='Active'&&order.indexOf(c.sd)>=0)days[c.sd]=1;});
+  const i=order.indexOf(dayNameOf(now||new Date()));
+  for(let k=1;k<=7;k++){const d=order[(i+k)%7];if(days[d])return d;}
+  return null;
+}
+/* v7.13: liquid chlorine and acid as a TOTAL-OWNED countdown. PURE READ.
+   On hand comes from tlfStockRow (baseline plus Gorman restocks minus every
+   logged dose). Today's remaining need and the next route day's need come
+   from the same per-pool averages Machine A uses, raw (no heat lean, no
+   spares): this is an inventory countdown, not the weekly buy list. Silent
+   per chemical until a starting stock is set; the app never invents an
+   inventory number. */
+function tlfDayOutlook(){
+  const out={cla:null,acid:null};
+  try{
+    const today=localDate();const dn=dayNameOf(new Date());
+    const nextDay=tlfNextRouteDayName(new Date());
+    const visitedToday={};DB.visits.forEach(v=>{if(!v.skip&&String(v.dt||'')===today)visitedToday[v.cid]=true;});
+    const needT={cla:0,acid:0},needN={cla:0,acid:0};
+    DB.clients.forEach(c=>{
+      if(c.st!=='Active')return;const a=tlfPoolAvg(c.id);if(!a)return;
+      if(c.sd===dn&&!visitedToday[c.id]){needT.cla+=a.cla;needT.acid+=a.acid;}
+      if(nextDay&&c.sd===nextDay){needN.cla+=a.cla;needN.acid+=a.acid;}
+    });
+    ['cla','acid'].forEach(ch=>{
+      const r=tlfStockRow(ch);if(!r)return;
+      const after=r.remaining-needT[ch];
+      out[ch]={remaining:r.remaining,needToday:needT[ch],needNext:needN[ch],afterToday:after,nextDay:nextDay,
+        shortToday:r.remaining<needT[ch],shortNext:!!nextDay&&after<needN[ch]};
+    });
+  }catch(e){}
+  return out;
+}
+/* The stern look-ahead: enough for today or not, enough for the next route
+   day or not, said plainly with the fix attached. */
+function tlfOutlookHtml(){
+  let h='';
+  try{
+    const o=tlfDayOutlook();
+    ['cla','acid'].forEach(ch=>{
+      const d=o[ch];if(!d)return;
+      const nm=TLF_STOCK_META[ch].nm;
+      const g1=Math.max(0,Math.round(d.remaining*10)/10);
+      const gA=Math.max(0,Math.round(d.afterToday*10)/10);
+      const nT=Math.round(d.needToday*10)/10,nN=Math.round(d.needNext*10)/10;
+      let msg=null;
+      if(d.shortToday){
+        msg='🚨 '+nm+': not enough on hand to finish today. About '+g1+' gal left; today\'s remaining stops need about '+nT+' gal. '+tlfGormanNote()+'.';
+      }else if(d.shortNext){
+        msg='🚨 '+nm+': enough for today, NOT enough for '+d.nextDay+'. About '+gA+' gal will be left after today and '+d.nextDay+' needs about '+nN+' gal. Hook up the trailer tonight and restock at Gorman in the morning.';
+      }
+      if(msg)h+='<div style="font-size:12px;font-weight:700;color:#b91c1c;background:rgba(232,102,108,0.10);border:1px solid rgba(232,102,108,0.5);border-radius:8px;padding:8px 10px;margin-bottom:10px;">'+msg+'</div>';
+    });
+  }catch(e){}
+  return h;
 }
 function tlfAddBag(){tlfRestock('salta',TLF_SALT_BAG_LBS);}
 function tlfAdd50(chem){tlfRestock(chem,50);}
 function tlfRestockPrompt(chem){
-  const meta=TLF_STOCK_META[chem];const isSalt=chem==='salta';
-  const raw=prompt('Restock amount for '+meta.nm+(isSalt?' (bags):':' (lbs):'),isSalt?'1':'50');
+  const meta=TLF_STOCK_META[chem];const isSalt=chem==='salta';const isLiq=(chem==='cla'||chem==='acid');
+  const raw=prompt('Restock amount for '+meta.nm+(isSalt?' (bags):':(isLiq?' (jugs):':' (lbs):')),isSalt?'1':(isLiq?'10':'50'));
   if(raw===null)return;
   const n=parseFloat(raw);if(isNaN(n)||n<=0){alert('Enter a number greater than 0.');return;}
-  tlfRestock(chem,isSalt?n*TLF_SALT_BAG_LBS:n);
+  const fac=isSalt?TLF_SALT_BAG_LBS:(chem==='cla'?TLF_CHLORINE_JUG_GAL:(chem==='acid'?TLF_ACID_JUG_GAL:1));
+  tlfRestock(chem,n*fac);
 }
 function tlfSetBaseline(chem){
   const el=document.getElementById('tk-base-'+chem);if(!el)return;
   const n=parseFloat(el.value);
   if(isNaN(n)||n<0){alert('Enter a starting amount first.');return;}
   const s=tlfGet();
-  s.stock[chem]={baseline:(chem==='salta'?n*TLF_SALT_BAG_LBS:n),baselineDate:localDate(),restocks:[]};
+  const fac=(chem==='salta')?TLF_SALT_BAG_LBS:((chem==='cla')?TLF_CHLORINE_JUG_GAL:((chem==='acid')?TLF_ACID_JUG_GAL:1));
+  s.stock[chem]={baseline:n*fac,baselineDate:localDate(),baselineMt:Date.now(),restocks:[]};
   tlfSave(s);try{truckRun();}catch(e){}try{renderTruckCard();}catch(e){}
 }
 function tlfSetCaps(){
@@ -4427,15 +4585,16 @@ function tlfSetCaps(){
   const tc=g('tk-tr-cl'),ta=g('tk-tr-ac');
   if(tc!==null)s.transports.trailer.chlorineJugs=tc;
   if(ta!==null)s.transports.trailer.acidJugs=ta;
+  s.transports.mt=Date.now();
   tlfSave(s);try{truckRun();}catch(e){}
 }
-function tlfSelect(t){const s=tlfGet();s.selected=t;tlfSave(s);try{truckRun();}catch(e){}}
 function openTruck(){try{truckRun();}catch(e){}openM('mo-truck');}
 /* The "🚚 Truck Load" view. */
 function truckRun(){
   const con=document.getElementById('truck-con');if(!con)return;
   const s=tlfGet();const f=tlfForecast();
-  let h='<div class="ch" style="margin-bottom:6px;">This Week\'s Load</div>';
+  let h=tlfOutlookHtml();
+  h+='<div class="ch" style="margin-bottom:6px;">This Week\'s Load</div>';
   if(f.claGal<=0&&f.acidGal<=0&&!f.noHist.length){
     h+='<div class="emp">No visit history to forecast from yet.</div>';
   }else{
@@ -4449,35 +4608,35 @@ function truckRun(){
     if(f.lean)h+='<div style="font-size:12px;color:#b45309;margin-top:8px;">☀️ Leaning higher: the week ahead runs hotter than recent visits. Chlorine leans up to 25% higher when that happens.</div>';
     if(f.noHist.length)h+='<div style="font-size:12px;color:var(--g600);margin-top:8px;"><b>Bring extra (no history yet):</b> '+f.noHist.join(' · ')+'</div>';
   }
-  h+='<div class="ch" style="margin:16px 0 6px;">Loading with:</div>';
-  h+='<div style="display:flex;gap:8px;margin-bottom:8px;">'
-    +'<button class="btn '+(s.selected==='truck'?'bp':'bs')+' bsm" style="flex:1;" onclick="tlfSelect(\'truck\')">Truck Bed</button>'
-    +'<button class="btn '+(s.selected==='trailer'?'bp':'bs')+' bsm" style="flex:1;" onclick="tlfSelect(\'trailer\')">Trailer</button></div>';
-  const cap=s.transports[s.selected]||{chlorineJugs:null,acidJugs:null};
-  const nmCap=s.selected==='trailer'?'Trailer':'Truck bed';
-  const nmLow=s.selected==='trailer'?'trailer':'truck bed';
-  if(cap.chlorineJugs===null||cap.chlorineJugs===undefined||cap.acidJugs===null||cap.acidJugs===undefined){
-    h+='<div style="font-size:13px;color:var(--g600);">'+nmCap+' capacity not set yet. Set it below.</div>';
+  h+='<div class="ch" style="margin:16px 0 6px;">Hauling capacity</div>';
+  const tkc=s.transports.truck||{},trc=s.transports.trailer||{};
+  const capC=(parseFloat(tkc.chlorineJugs)||0)+(parseFloat(trc.chlorineJugs)||0);
+  const capA=(parseFloat(tkc.acidJugs)||0)+(parseFloat(trc.acidJugs)||0);
+  if(capC<=0&&capA<=0){
+    h+='<div style="font-size:13px;color:var(--g600);">Capacities not set yet. Set them below.</div>';
   }else if(f.claGal<=0&&f.acidGal<=0){
-    h+='<div style="font-size:13px;color:var(--g800);">'+nmCap+' holds '+cap.chlorineJugs+' chlorine + '+cap.acidJugs+' acid jugs.</div>';
+    h+='<div style="font-size:13px;color:var(--g800);">Truck bed + trailer together haul '+capC+' chlorine + '+capA+' acid jugs.</div>';
   }else{
-    const overC=f.claJugs>cap.chlorineJugs,overA=f.acidJugs>cap.acidJugs;
-    let line=nmCap+' holds '+cap.chlorineJugs+' chlorine + '+cap.acidJugs+' acid jugs. ';
-    if(!overC&&!overA){line+='This week fits.';}
+    const overC=f.claJugs>capC,overA=f.acidJugs>capA;
+    let line='Truck bed + trailer together haul '+capC+' chlorine + '+capA+' acid jugs. ';
+    if(!overC&&!overA){line+='This week fits in one full load.';}
     else{
       const parts=[];
-      if(overC)parts.push('chlorine ('+f.claJugs+' jugs) exceeds the '+nmLow+' ('+cap.chlorineJugs+')');
-      if(overA)parts.push('acid ('+f.acidJugs+' jugs) exceeds the '+nmLow+' ('+cap.acidJugs+')');
+      if(overC)parts.push('chlorine ('+f.claJugs+' jugs) exceeds the combined '+capC);
+      if(overA)parts.push('acid ('+f.acidJugs+' jugs) exceeds the combined '+capA);
       line+='This week\'s '+parts.join(' and ')+'. You will need a midweek top-off.';
     }
     h+='<div style="font-size:13px;color:'+((overC||overA)?'#b45309':'var(--g800)')+';font-weight:'+((overC||overA)?'600':'400')+';">'+line+'</div>';
   }
   h+='<div class="ch" style="margin:16px 0 6px;">Chemical Stock</div>';
-  ['bic','cyaa','cacl','salta'].forEach(function(ch){
+  ['cla','acid','bic','cyaa','cacl','salta'].forEach(function(ch){
     const meta=TLF_STOCK_META[ch];const r=tlfStockRow(ch);
     if(!r){h+='<div style="font-size:13px;color:var(--g400);padding:4px 0;">'+meta.nm+': starting stock not set yet.</div>';return;}
     let txt,btn='';
-    if(ch==='salta'){
+    if(ch==='cla'||ch==='acid'){
+      txt=meta.nm+': about '+Math.max(0,Math.round(r.remaining*10)/10)+' gal left ('+tlfFmtBags(Math.max(0,r.jugs))+' jugs)';
+      btn='<button class="btn bs bsm" onclick="tlfRestockPrompt(\''+ch+'\')" style="margin-left:8px;white-space:nowrap;">+ Add jugs</button>';
+    }else if(ch==='salta'){
       const b=Math.max(0,r.bags);
       txt='Salt: '+tlfFmtBags(b)+' '+tlfBagWord(b)+' left'+(r.low?' (buy more)':'');
       if(r.low)btn='<button class="btn bs bsm" onclick="tlfAddBag()" style="margin-left:8px;white-space:nowrap;">+ Add bag</button>';
@@ -4498,15 +4657,16 @@ function truckRun(){
       +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:12px;color:var(--g800);"><span style="width:74px;">Trailer</span><input type="number" class="fi" id="tk-tr-cl" placeholder="chlorine" value="'+iv(tr.chlorineJugs)+'" style="flex:1;padding:6px;"><input type="number" class="fi" id="tk-tr-ac" placeholder="acid" value="'+iv(tr.acidJugs)+'" style="flex:1;padding:6px;"></div>'
       +'<button class="btn bs bsm" style="width:100%;" onclick="tlfSetCaps()">Save Capacities</button>'
       +'<div style="font-size:12px;font-weight:700;color:var(--navy);margin:12px 0 6px;">Starting stock</div>';
-    ['bic','cyaa','cacl','salta'].forEach(function(ch){
-      const meta=TLF_STOCK_META[ch];const st=s.stock[ch];const isSalt=ch==='salta';
-      const cur=(st&&st.baseline!==null&&st.baseline!==undefined)?(isSalt?tlfFmtBags(st.baseline/TLF_SALT_BAG_LBS):String(Math.round(st.baseline))):'';
-      h+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;font-size:12px;color:var(--g800);"><span style="width:110px;">'+meta.nm+(isSalt?' (bags)':' (lbs)')+'</span>'
+    ['cla','acid','bic','cyaa','cacl','salta'].forEach(function(ch){
+      const meta=TLF_STOCK_META[ch];const st=s.stock[ch];const isSalt=ch==='salta';const isLiq=(ch==='cla'||ch==='acid');
+      const fac=isSalt?TLF_SALT_BAG_LBS:(ch==='cla'?TLF_CHLORINE_JUG_GAL:(ch==='acid'?TLF_ACID_JUG_GAL:1));
+      const cur=(st&&st.baseline!==null&&st.baseline!==undefined)?((isSalt||isLiq)?tlfFmtBags(st.baseline/fac):String(Math.round(st.baseline))):'';
+      h+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;font-size:12px;color:var(--g800);"><span style="width:110px;">'+meta.nm+(isSalt?' (bags)':(isLiq?' (jugs)':' (lbs)'))+'</span>'
         +'<input type="number" class="fi" id="tk-base-'+ch+'" value="'+cur+'" style="flex:1;padding:6px;min-width:0;">'
         +'<button class="btn bs bsm" onclick="tlfSetBaseline(\''+ch+'\')" style="white-space:nowrap;">Set</button>'
         +'<button class="btn bs bsm" onclick="tlfRestockPrompt(\''+ch+'\')" style="white-space:nowrap;">+ Restock</button></div>';
     });
-    h+='<div style="font-size:11px;color:var(--g400);margin-top:4px;">Setting a starting amount stamps today as the baseline date and clears prior restocks. Doses logged on visits subtract automatically.</div></div>';
+    h+='<div style="font-size:11px;color:var(--g400);margin-top:4px;">Setting a starting amount stamps today as the baseline date and clears prior restocks. Doses logged on visits subtract automatically. Chlorine and acid count everything you own: truck, trailer, and anything at home.</div></div>';
   }
   con.innerHTML=h;
 }
@@ -4516,6 +4676,7 @@ function renderTruckCard(){
     const el=document.getElementById('truck-card');if(!el)return;
     const f=tlfForecast();const lows=tlfLowRows();
     let inner='<div class="ch" style="margin-bottom:6px;">🚚 Truck Load</div>';
+    inner+=tlfOutlookHtml();
     if(f.claGal>0||f.acidGal>0)inner+='<div style="font-size:12px;color:var(--g600);margin-bottom:8px;">This week: about '+f.claJugs+' jugs chlorine · '+f.acidJugs+' jugs acid</div>';
     lows.forEach(function(r){
       const b=Math.max(0,r.bags||0);
@@ -4530,6 +4691,7 @@ function renderTruckCard(){
 function truckKickLine(){
   try{
     let h='';
+    h+=tlfOutlookHtml();
     if(isFirstRouteDay()){
       const f=tlfForecast();
       if(f.claGal>0||f.acidGal>0)h+='<div style="font-size:12px;font-weight:600;color:var(--navy);background:rgba(6,186,181,0.10);border:1px solid rgba(6,186,181,0.4);border-radius:8px;padding:8px 10px;margin-bottom:10px;">🚚 This week\'s load: about '+f.claJugs+' jugs chlorine, '+f.acidJugs+' jugs acid</div>';
@@ -4684,11 +4846,15 @@ function pppSettingsRender(){
    Never touches the DB, never calls save() or kickSync(). */
 function pppSetPrice(){
   const s=pppGet();
+  const now=Date.now();
   PPP_CHEMS.forEach(ch=>{
     const pr=document.getElementById('ppp-pr-'+ch.field),pk=document.getElementById('ppp-pk-'+ch.field);
     if(!pr||!pk)return;
     const pv=parseFloat(pr.value),kv=parseFloat(pk.value);
-    s.prices[ch.field]={price:(pv>0?pv:null),pack:(kv>0?kv:null)};
+    const nv={price:(pv>0?pv:null),pack:(kv>0?kv:null)};
+    const old=s.prices[ch.field];
+    const changed=!old||old.price!==nv.price||old.pack!==nv.pack;
+    s.prices[ch.field]=changed?{price:nv.price,pack:nv.pack,mt:now}:old;
   });
   pppSave(s);
   try{pppRender();}catch(e){}
