@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<!--
+  Ripple Pool Solutions field app. Single-file architecture BY DESIGN: one HTML file,
+  vanilla JS, no build step, deployed as-is to GitHub Pages. Before changing anything,
+  read DEVELOPER_README.md in this repo. Several functions in this file dose real
+  swimming pools with real chemicals; the README lists the protected functions and the
+  verification protocol that governs every change to them. App data lives in browser
+  localStorage, never in this file, so deploys never touch data. The app version is the
+  APP_VER constant at the top of the script section; it is never rendered on screen.
+-->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -414,8 +423,47 @@ body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g800);mi
 </nav>
 
 <script>
+/* ═══════════════════ TABLE OF CONTENTS ═══════════════════
+   Sections appear in this order. To jump to one, search for its banner text: every
+   section opens with a boxed banner comment in this same style. Line numbers are
+   deliberately omitted here because they go stale.
+
+     DATABASE ................. storage keys, DB shape, load/save/migrate
+     v7.3 GUIDED ROUTE FLOW ... kickoff, arming, catch-ups, skips, finalize
+     SUMMER MODE .............. Open-Meteo weather cache, burn-rate input
+     SYNC ..................... two-device merge sync + v7.12 admin section
+     CLEAR ALL PHOTOS
+     END VISIT FLOW
+     FLOATING CAMERA
+     PHOTO TAKEOVER + EDITABLE TIMES (v7.4.2)
+     PHONE LINKS
+     DRAFT AUTO-SAVE
+     NAV
+     MAPS
+     DASHBOARD ................ home stats, unsent queue + v7.14 dismiss
+     CLIENTS .................. client cards, add/edit form, book field
+     VISIT .................... visit form, readings, field flags
+     FOLLOW-UP NOTES
+     LSI + DOSING ............. carry layer, calcLSI, calcDose, doLSI (PROTECTED)
+     PHOTOS
+     v7.9.1 DURATION-SANITY NUDGE
+     SAVE VISIT
+     REPORT ................... on-screen visit report preview
+     ROUTE
+     HISTORY
+     VISIT SUMMARY HELPERS
+     VISIT DETAIL VIEW ........ view, edit, and delete saved visits
+     v7.2 REPORT + EMAIL SHARED HELPERS (PROTECTED: single source of truth)
+     PDF REPORT GENERATION (v7.2 visual redesign)
+     SHARE REPORT WITH PHOTOS (PDF)
+     POOL HEALTH REPORT (v7.7, internal only) ... includes the v7.15 batch table
+     BACKUP / EXPORT
+     v7.8: TRUCK LOAD ......... forecast + stock ledger + v7.13 day outlook
+     v7.9 PROFIT PER POOL (PPP) (internal only)
+     INIT
+   ════════════════════════════════════════════════════════ */
 /* ═══════════ DATABASE ═══════════ */
-const APP_VER='v7.15';
+const APP_VER='v7.16';
 const SK='ripple_pool_v3';
 const DK='ripple_draft_v1';
 let DB={clients:[],visits:[],nid:1};
@@ -930,9 +978,9 @@ function migrate(){
   });
   // v7.4: mt=0 means "never pushed" (the Ike bug). Stamp it so that state is impossible forever.
   DB.clients.forEach(c=>{if(!c.mt)c.mt=Date.now();if(!c.bk)c.bk='Ripple';});
-  // v7.4 one-time book initialization, CORRECTED (Victor, July 6): the roster belongs to Oasis
-  // except West, Ike, and NO client has ever been sent a report. Email toggles stay at Default,
-  // which per his governance rule means OFF and gated for Oasis, ON for Ripple (Ike). The v2
+  // v7.4 one-time book initialization (corrected July 6): assigns each client's book field
+  // per the operator's records; email toggles stay at Default, which follows the per-book
+  // defaults in emailOn(). The v2
   // flag lets this run once per device AND self-correct any device that ran the earlier init.
   try{
     if(!localStorage.getItem('ripple_bookinit_v2')&&DB.clients.length){
@@ -1067,7 +1115,7 @@ function rSummerBadge(){
     +'<div style="font-size:11px;opacity:0.85;">'+modeTxt+' · Tap to override</div></div></div>';
 }
 
-/* ═══════════ SYNC ADAPTER (stub — Phase 2 replaces with Google Apps Script) ═══════════ */
+/* ═══════════ SYNC (live two-device merge via Google Apps Script; v7.12 admin section) ═══════════ */
 const SYNCK='ripple_sync_v1';
 let SYNC={url:'',code:'',lastSeq:0,lastPush:0,lastOk:null,horizon:null,dev:''};
 try{const _s=localStorage.getItem(SYNCK);if(_s)SYNC={...SYNC,...JSON.parse(_s)};}catch(e){}
@@ -1809,7 +1857,6 @@ function updMeasuredDecay(){
   el.style.display='block';
 }
 
-/* ═══════════ LSI + DOSING ═══════════ */
 /* ═══════════ FOLLOW-UP NOTES ═══════════ */
 function addFollowup(cid,text,fieldId){
   const _fc=DB.clients.find(c=>c.id===cid);if(_fc)_fc.mt=Date.now();
@@ -1981,6 +2028,7 @@ function chkBicCa(){
     caWarn.style.display='none';
   }
 }
+/* ═══════════ LSI + DOSING ═══════════ */
 function calcDur(start,end){
   // Parse "HH:MM AM/PM" times and return duration string e.g. "32 min"
   try{
@@ -4787,7 +4835,7 @@ function truckKickLine(){
 try{renderTruckCard();}catch(e){}
 
 /* ═══════════ v7.9 PROFIT PER POOL (PPP) ═══════════
-   Internal-only, PURE READ ledger: revenue that reaches Victor, chemical cost, time, and
+   Internal-only, PURE READ ledger: operator revenue, chemical cost, time, and
    gross margin per Active pool, ranked worst margin first, with a per-book rollup and a
    raise-candidates list. Machine A class: writes NOTHING to the DB. The only persisted
    state is the chemical price list in ripple_ppp_v1 (per device, re-enterable, outside
@@ -4795,7 +4843,7 @@ try{renderTruckCard();}catch(e){}
    ledger costs real logged doses only. Every value in this block is INTERNAL; none may
    reach any client-facing builder. Honest gaps over invented numbers throughout. */
 const PPP_KEY='ripple_ppp_v1';
-const PPP_OASIS_SHARE=0.65;     /* Victor's receipt fraction on Oasis-book pools; first thing to tune */
+const PPP_OASIS_SHARE=0.65;     /* revenue multiplier applied to rt on Oasis-book pools; tunable */
 const PPP_WINDOW=13;            /* real visits averaged per pool, about a trailing quarter */
 const PPP_MARGIN_AMBER=0.40;    /* amber raise-candidate flag below this gross margin */
 const PPP_DAYS_PER_MONTH=30.44; /* 365.25/12, for the derived visits-per-month */
@@ -4855,9 +4903,9 @@ function pppMinPerVisit(win){
   });
   return n?tot/n:null;
 }
-/* Revenue that reaches Victor: rt for Ripple-book pools, rt * PPP_OASIS_SHARE for
-   Oasis-book pools (rt on an Oasis pool is what the homeowner pays Oasis). Branched on
-   bookOf(c), never c.bk directly. Null when rt is not a positive number. */
+/* Monthly revenue: rt for Ripple-book pools, rt * PPP_OASIS_SHARE for Oasis-book
+   pools. Branched on bookOf(c), never c.bk directly. Null when rt is not a positive
+   number. */
 function pppRevenueMo(c){const rt=parseFloat(c.rt);if(!(rt>0))return null;return bookOf(c)==='Oasis'?rt*PPP_OASIS_SHARE:rt;}
 function pppFmtMoney(v){return '$'+Math.round(v);}
 function pppFmtPct(v){return Math.round(v*100)+'%';}
